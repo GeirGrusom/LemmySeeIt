@@ -81,10 +81,7 @@
                                      LinkCommand="{Binding OpenMarkdownLinkCommand}" />
 
                     <StackPanel Orientation="Horizontal" Spacing="14">
-                        <StackPanel Orientation="Horizontal" Spacing="4">
-                            <TextBlock Classes="meta" Text="&#x25B2;" />
-                            <TextBlock Classes="meta" Text="{Binding ScoreLabel}" />
-                        </StackPanel>
+                        <views:VoteBarView DataContext="{Binding Votes}" />
                         <StackPanel Orientation="Horizontal" Spacing="4">
                             <TextBlock Classes="meta" Text="&#x1F5E8;" />
                             <TextBlock Classes="meta" Text="{Binding CommentsLabel}" />

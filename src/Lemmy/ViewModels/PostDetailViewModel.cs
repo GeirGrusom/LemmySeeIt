@@ -51,10 +51,18 @@ public sealed partial class PostDetailViewModel : PageViewModel
         Body = MarkdownParser.Parse(summary.Post.Body);
         isImageHidden = settings.BlurNsfwImages && summary.Post.IsNsfw;
         selectedSort = settings.CommentSort;
+
+        Votes = new VoteBarViewModel(
+            new VoteOutcome(summary.MyVote, summary.Tally.Score, summary.Tally.Upvotes, summary.Tally.Downvotes),
+            api.IsAuthenticated,
+            (vote, token) => api.VoteOnPostAsync(summary.Post.Id, vote, token));
     }
 
     /// <summary>The post and everything joined onto it.</summary>
     public PostSummary Summary { get; }
+
+    /// <summary>The arrows and the running score for the post itself.</summary>
+    public VoteBarViewModel Votes { get; }
 
     /// <inheritdoc />
     public override string Title => Summary.Post.Title.Value;
@@ -139,7 +147,7 @@ public sealed partial class PostDetailViewModel : PageViewModel
         DateTimeOffset now = Services.Now;
         foreach (CommentNode root in thread.Roots)
         {
-            Comments.Add(new CommentViewModel(root, now, OpenMarkdownLinkCommand));
+            Comments.Add(new CommentViewModel(root, now, api, OpenMarkdownLinkCommand));
         }
 
         HasNoComments = Comments.Count == 0;

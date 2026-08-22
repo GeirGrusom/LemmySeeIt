@@ -8,6 +8,7 @@ using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using Lemmy;
+using Lemmy.Domain;
 using Lemmy.Domain.Models;
 using Lemmy.Services;
 using Lemmy.Tests.TestSupport;
@@ -489,5 +490,69 @@ internal sealed class ViewRenderingTests
 
         Assert.That(frame, Is.Not.Null);
         Assert.That(frame!.PixelSize.Width, Is.GreaterThan(0));
+    }
+
+    [AvaloniaTest]
+    public async Task SignedOutAFeedRowShowsTheScoreWithNoArrows()
+    {
+        var services = new TestServices();
+        services.Api.IsAuthenticated.Returns(false);
+        using FeedViewModel feed = await LoadedFeedAsync(services);
+
+        Window window = Show(new FeedView(), feed);
+
+        Control[] arrows = [.. Descendants(window)
+            .OfType<Button>()
+            .Where(button => button.Classes.Contains("vote") && button.IsEffectivelyVisible)];
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(arrows, Is.Empty);
+            Assert.That(VisibleText(window), Does.Contain("12"));
+        });
+    }
+
+    [AvaloniaTest]
+    public async Task SignedInAFeedRowOffersBothArrows()
+    {
+        var services = new TestServices();
+        services.Api.IsAuthenticated.Returns(true);
+        using FeedViewModel feed = await LoadedFeedAsync(services);
+
+        Window window = Show(new FeedView(), feed);
+
+        Button[] arrows = [.. Descendants(window)
+            .OfType<Button>()
+            .Where(button => button.Classes.Contains("vote") && button.IsEffectivelyVisible)];
+
+        Assert.Multiple(() =>
+        {
+            // Three rows, two arrows each.
+            Assert.That(arrows, Has.Length.EqualTo(6));
+            Assert.That(arrows.Count(button => button.Classes.Contains("up")), Is.EqualTo(3));
+            Assert.That(arrows.Count(button => button.Classes.Contains("down")), Is.EqualTo(3));
+        });
+    }
+
+    [AvaloniaTest]
+    public async Task PressingTheUpArrowOnARowVotesThroughTheApi()
+    {
+        var services = new TestServices();
+        services.Api.IsAuthenticated.Returns(true);
+        services.Api.VoteOnPostAsync(Arg.Any<PostId>(), Arg.Any<Vote>(), Arg.Any<CancellationToken>())
+            .Returns(new VoteOutcome(Vote.Up, new Score(99), new VoteCount(100), new VoteCount(1)));
+
+        using FeedViewModel feed = await LoadedFeedAsync(services);
+        Window window = Show(new FeedView(), feed);
+
+        Button upArrow = Descendants(window)
+            .OfType<Button>()
+            .First(button => button.Classes.Contains("vote") && button.Classes.Contains("up"));
+
+        upArrow.Command!.Execute(null);
+        Settle();
+
+        await services.Api.Received(1).VoteOnPostAsync(Arg.Any<PostId>(), Vote.Up, Arg.Any<CancellationToken>());
+        Assert.That(feed.Posts[0].Votes.IsUpvoted, Is.True);
     }
 }

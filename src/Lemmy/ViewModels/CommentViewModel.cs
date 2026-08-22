@@ -3,6 +3,8 @@ using System.Collections.ObjectModel;
 using System.Windows.Input;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Lemmy.Api;
+using Lemmy.Domain;
 using Lemmy.Domain.Markdown;
 using Lemmy.Domain.Models;
 using Lemmy.Services;
@@ -18,20 +20,27 @@ public sealed partial class CommentViewModel : ViewModelBase
     /// <summary>Wraps a comment for display.</summary>
     /// <param name="node">The comment and its replies.</param>
     /// <param name="now">The current time, for the age label.</param>
+    /// <param name="api">The client this comment and its replies vote through.</param>
     /// <param name="linkCommand">
     /// Opens a link pressed inside the comment. Passed down the tree rather than resolved per
     /// comment: a thread is hundreds of these, and they all open links the same way.
     /// </param>
-    public CommentViewModel(CommentNode node, DateTimeOffset now, ICommand? linkCommand = null)
+    public CommentViewModel(CommentNode node, DateTimeOffset now, ILemmyApi api, ICommand? linkCommand = null)
     {
         ArgumentNullException.ThrowIfNull(node);
+        ArgumentNullException.ThrowIfNull(api);
 
         Node = node;
         LinkCommand = linkCommand;
         AgeLabel = RelativeTime.Format(node.Comment.Published, now);
         Content = MarkdownParser.Parse(node.Comment.VisibleContent);
+        Votes = new VoteBarViewModel(
+            new VoteOutcome(node.MyVote, node.Tally.Score, node.Tally.Upvotes, node.Tally.Downvotes),
+            api.IsAuthenticated,
+            (vote, token) => api.VoteOnCommentAsync(node.Comment.Id, vote, token));
+
         Replies = new ObservableCollection<CommentViewModel>(
-            node.Replies.Select(reply => new CommentViewModel(reply, now, linkCommand)));
+            node.Replies.Select(reply => new CommentViewModel(reply, now, api, linkCommand)));
     }
 
     /// <summary>The comment and its replies.</summary>
@@ -55,8 +64,8 @@ public sealed partial class CommentViewModel : ViewModelBase
     /// <summary>How long ago the comment was made.</summary>
     public string AgeLabel { get; }
 
-    /// <summary>The score, shortened for a badge.</summary>
-    public string ScoreLabel => Node.Tally.Score.ToCompactString();
+    /// <summary>The arrows and the running score.</summary>
+    public VoteBarViewModel Votes { get; }
 
     /// <summary>Whether the author moderates the community or administers the instance.</summary>
     public bool HasAuthorBadge => Node.CreatorIsModerator || Node.CreatorIsAdmin;

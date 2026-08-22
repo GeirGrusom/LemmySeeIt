@@ -4,8 +4,8 @@ A reading client for [Lemmy](https://join-lemmy.org), the federated link-aggrega
 refugees landed on. Browse an instance's front page, drill into a community, read a comment thread,
 search, and switch between servers. Sign in and you also get your subscribed feed.
 
-It only reads: there is no way to post, vote, comment or subscribe from here. Each post links out to
-its page on the web for that.
+Signed in you can vote on posts and comments. Writing otherwise — posting, commenting, subscribing —
+is not built yet, and each post links out to its page on the web for that.
 
 Runs on Windows, Linux and Android from one shared codebase, with an iOS head that is kept
 compiling-ready.
@@ -116,8 +116,13 @@ server you are pointed at). Scrolling to the bottom loads more. Pull down to ref
 screen, or use the Refresh button.
 
 **Reading a post.** Tap a row to open it with its comment thread, which sorts by Hot, Top, New, Old
-or Controversial. **Open on the web** hands the post to your browser, which is where you go to vote,
+or Controversial. **Open on the web** hands the post to your browser, which is where you go to
 comment or subscribe. Back returns to the feed at the row you were on, not the top.
+
+**Voting.** Signed in, every feed row, post and comment gets an up and a down arrow around its
+score. Pressing the arrow you already chose takes the vote back. The score moves as you press it
+rather than after the server answers, and moves back with a reason if the vote does not take.
+Signed out the arrows are not shown at all — just the score, as before.
 
 **Pictures.** Tap the thumbnail on a feed row to open the picture full screen without opening the
 post. Double-tap or pinch to zoom, drag to pan, and flick left and right to move through the other
@@ -129,7 +134,7 @@ arrow keys work on the desktop heads.
 covers both posts and communities on it.
 
 **Signing in** is optional — everything above works without it. An account adds the **Subscribed**
-listing to the feed, which is the usual reason to bother, and shows the votes you have already cast.
+listing to the feed, shows the votes you have already cast, and is what turns the vote arrows on.
 The account control is in the header, next to the instance name; signing out lives inside the
 account sheet so a stray tap cannot end your session.
 
@@ -141,7 +146,8 @@ images until tapped. Signing in adopts whatever your account already has set.
 
 ## Limitations
 
-- Voting, commenting and subscribing are not wired up; each post links out to the web instead.
+- Commenting, posting and subscribing are not wired up; each post links out to the web instead.
+  Voting is the only thing this client writes.
 - AVIF images do not decode, so those posts show the server's preview rather than the original.
 - A comment thread is fetched eight levels deep in one request; "12 more replies" is shown but not
   yet loadable, and the thread has no pull-to-refresh.

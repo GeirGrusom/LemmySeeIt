@@ -167,4 +167,31 @@
         <Setter Property="Foreground" Value="{DynamicResource SecondaryText}" />
     </Style>
 
+    <!-- Vote arrows. Deliberately large for a thumb: the tap target is padding, not glyph size. -->
+    <Style Selector="Button.vote">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Padding" Value="10,4" />
+        <Setter Property="MinWidth" Value="0" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="Foreground" Value="{DynamicResource SecondaryText}" />
+        <Setter Property="Cursor" Value="Hand" />
+    </Style>
+
+    <Style Selector="Button.vote:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="Transparent" />
+    </Style>
+
+    <Style Selector="Button.vote:disabled">
+        <Setter Property="Opacity" Value="0.4" />
+    </Style>
+
+    <Style Selector="Button.vote.up.cast">
+        <Setter Property="Foreground" Value="{DynamicResource PositiveText}" />
+    </Style>
+
+    <Style Selector="Button.vote.down.cast">
+        <Setter Property="Foreground" Value="{DynamicResource NegativeText}" />
+    </Style>
+
 </Styles>

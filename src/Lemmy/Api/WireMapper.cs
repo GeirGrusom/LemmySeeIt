@@ -188,6 +188,24 @@ internal static class WireMapper
         return true;
     }
 
+    /// <summary>
+    /// Reads the counts a vote response came back with. Both like endpoints answer with the whole
+    /// view again, but only the tally and the account's own vote can have changed, so that is all
+    /// this takes — the caller already has the rest on screen.
+    /// </summary>
+    internal static VoteOutcome MapVoteOutcome(PostViewWire? wire)
+    {
+        PostTally tally = MapTally(wire?.Counts);
+        return new VoteOutcome(wire?.MyVote.ToVote() ?? Vote.None, tally.Score, tally.Upvotes, tally.Downvotes);
+    }
+
+    /// <inheritdoc cref="MapVoteOutcome(PostViewWire?)" />
+    internal static VoteOutcome MapVoteOutcome(CommentViewWire? wire)
+    {
+        CommentTally tally = MapTally(wire?.Counts);
+        return new VoteOutcome(wire?.MyVote.ToVote() ?? Vote.None, tally.Score, tally.Upvotes, tally.Downvotes);
+    }
+
     internal static PostTally MapTally(PostAggregatesWire? wire) =>
         wire is null
             ? PostTally.Empty

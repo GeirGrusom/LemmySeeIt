@@ -288,6 +288,54 @@ public sealed class LemmyApiClient : ILemmyApi
     }
 
     /// <inheritdoc />
+    public async Task<VoteOutcome> VoteOnPostAsync(
+        PostId postId,
+        Vote vote,
+        CancellationToken cancellationToken = default)
+    {
+        RequireSession("vote");
+
+        PostResponse response = await PostAsync(
+            ApiRoot + "post/like",
+            new VotePostRequestWire { PostId = postId.Value, Score = vote.ToScore() },
+            LemmyJson.Context.VotePostRequestWire,
+            LemmyJson.Context.PostResponse,
+            cancellationToken).ConfigureAwait(false);
+
+        return WireMapper.MapVoteOutcome(response.PostView);
+    }
+
+    /// <inheritdoc />
+    public async Task<VoteOutcome> VoteOnCommentAsync(
+        CommentId commentId,
+        Vote vote,
+        CancellationToken cancellationToken = default)
+    {
+        RequireSession("vote");
+
+        CommentResponse response = await PostAsync(
+            ApiRoot + "comment/like",
+            new VoteCommentRequestWire { CommentId = commentId.Value, Score = vote.ToScore() },
+            LemmyJson.Context.VoteCommentRequestWire,
+            LemmyJson.Context.CommentResponse,
+            cancellationToken).ConfigureAwait(false);
+
+        return WireMapper.MapVoteOutcome(response.CommentView);
+    }
+
+    /// <summary>
+    /// Fails before the request rather than after it. An unauthenticated write is answered by Lemmy
+    /// with a generic error, and "not_logged_in" is not something to put in front of a reader.
+    /// </summary>
+    private void RequireSession(string action)
+    {
+        if (!session.IsValid)
+        {
+            throw new LemmyApiException($"You have to be signed in to {action}.");
+        }
+    }
+
+    /// <inheritdoc />
     public async Task<SiteSummary> GetSiteAsync(CancellationToken cancellationToken = default)
     {
         GetSiteResponse response = await GetAsync(ApiRoot + "site", LemmyJson.Context.GetSiteResponse, cancellationToken)

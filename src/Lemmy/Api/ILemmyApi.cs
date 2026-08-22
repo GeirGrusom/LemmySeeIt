@@ -59,6 +59,23 @@ public interface ILemmyApi
     /// <exception cref="LemmyApiException">The server refused the request or sent something unusable.</exception>
     Task<SearchResults> SearchAsync(SearchQuery query, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Casts, changes or takes back a vote on a post. <see cref="Vote.None"/> takes it back.
+    /// </summary>
+    /// <exception cref="LemmyApiException">
+    /// Nobody is signed in, the session has stopped working, or the instance refused the vote —
+    /// which it does for a locked post or from a community the account is banned from.
+    /// </exception>
+    Task<VoteOutcome> VoteOnPostAsync(PostId postId, Vote vote, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Casts, changes or takes back a vote on a comment. <see cref="Vote.None"/> takes it back.
+    /// </summary>
+    /// <exception cref="LemmyApiException">
+    /// Nobody is signed in, the session has stopped working, or the instance refused the vote.
+    /// </exception>
+    Task<VoteOutcome> VoteOnCommentAsync(CommentId commentId, Vote vote, CancellationToken cancellationToken = default);
+
     /// <summary>Fetches the instance's own description and totals.</summary>
     /// <exception cref="LemmyApiException">The server refused the request or sent something unusable.</exception>
     Task<SiteSummary> GetSiteAsync(CancellationToken cancellationToken = default);

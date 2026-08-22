@@ -1,6 +1,7 @@
 using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Lemmy.Api;
 using Lemmy.Domain;
 using Lemmy.Domain.Models;
 using Lemmy.Services;
@@ -26,6 +27,7 @@ public sealed partial class PostCardViewModel : ViewModelBase, IDisposable
     /// <param name="imageLoader">Fetches the thumbnail.</param>
     /// <param name="now">The current time, for the age label.</param>
     /// <param name="blurNsfw">Whether images on posts flagged not safe for work start hidden.</param>
+    /// <param name="api">The client the row votes through.</param>
     /// <param name="openRequested">Called when the reader opens the post.</param>
     /// <param name="viewImageRequested">Called when the reader opens the picture without the post.</param>
     public PostCardViewModel(
@@ -33,11 +35,13 @@ public sealed partial class PostCardViewModel : ViewModelBase, IDisposable
         IImageLoader imageLoader,
         DateTimeOffset now,
         bool blurNsfw,
+        ILemmyApi api,
         Action<PostCardViewModel> openRequested,
         Action<PostCardViewModel> viewImageRequested)
     {
         ArgumentNullException.ThrowIfNull(summary);
         ArgumentNullException.ThrowIfNull(imageLoader);
+        ArgumentNullException.ThrowIfNull(api);
         ArgumentNullException.ThrowIfNull(openRequested);
         ArgumentNullException.ThrowIfNull(viewImageRequested);
 
@@ -45,6 +49,11 @@ public sealed partial class PostCardViewModel : ViewModelBase, IDisposable
         this.imageLoader = imageLoader;
         this.openRequested = openRequested;
         this.viewImageRequested = viewImageRequested;
+
+        Votes = new VoteBarViewModel(
+            new VoteOutcome(summary.MyVote, summary.Tally.Score, summary.Tally.Upvotes, summary.Tally.Downvotes),
+            api.IsAuthenticated,
+            (vote, token) => api.VoteOnPostAsync(summary.Post.Id, vote, token));
 
         isImageHidden = blurNsfw && summary.Post.IsNsfw;
         AgeLabel = RelativeTime.Format(summary.Post.Published, now);
@@ -68,8 +77,8 @@ public sealed partial class PostCardViewModel : ViewModelBase, IDisposable
     /// <summary>How long ago the post was made.</summary>
     public string AgeLabel { get; }
 
-    /// <summary>The score, shortened for a badge.</summary>
-    public string ScoreLabel => Summary.Tally.Score.ToCompactString();
+    /// <summary>The arrows and the running score.</summary>
+    public VoteBarViewModel Votes { get; }
 
     /// <summary>The comment count, shortened for a badge.</summary>
     public string CommentsLabel => Summary.Tally.Comments.ToCompactString();

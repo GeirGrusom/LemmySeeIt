@@ -29,8 +29,7 @@
                     <Border Classes="chip" IsVisible="{Binding HasAuthorBadge}">
                         <TextBlock Classes="badge" Text="{Binding AuthorBadgeLabel}" />
                     </Border>
-                    <TextBlock Classes="meta" Text="&#x25B2;" />
-                    <TextBlock Classes="meta" Text="{Binding ScoreLabel}" />
+                    <views:VoteBarView DataContext="{Binding Votes}" />
                     <TextBlock Classes="meta" Text="·" />
                     <TextBlock Classes="meta" Text="{Binding AgeLabel}" />
                 </StackPanel>

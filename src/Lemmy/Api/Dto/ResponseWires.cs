@@ -108,6 +108,36 @@ internal sealed record ErrorResponse
     public string? Message { get; init; }
 }
 
+/// <summary>The body of <c>POST /api/v3/post/like</c>.</summary>
+internal sealed record PostResponse
+{
+    public PostViewWire? PostView { get; init; }
+}
+
+/// <summary>The body of <c>POST /api/v3/comment/like</c>.</summary>
+internal sealed record CommentResponse
+{
+    public CommentViewWire? CommentView { get; init; }
+}
+
+/// <summary>The body sent to <c>POST /api/v3/post/like</c>.</summary>
+internal sealed record VotePostRequestWire
+{
+    public int PostId { get; init; }
+
+    /// <summary>1, 0 or -1; zero is how a vote is taken back.</summary>
+    public int Score { get; init; }
+}
+
+/// <summary>The body sent to <c>POST /api/v3/comment/like</c>.</summary>
+internal sealed record VoteCommentRequestWire
+{
+    public int CommentId { get; init; }
+
+    /// <summary>1, 0 or -1; zero is how a vote is taken back.</summary>
+    public int Score { get; init; }
+}
+
 /// <summary>The body sent to <c>POST /api/v3/user/login</c>.</summary>
 internal sealed record LoginRequestWire
 {

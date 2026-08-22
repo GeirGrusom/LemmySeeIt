@@ -121,7 +121,7 @@ internal sealed class CommentViewModelTests
             1, "0.1", 2,
             Sample.CommentNode(2, "0.1.2", 1, Sample.CommentNode(3, "0.1.2.3")));
 
-        var viewModel = new CommentViewModel(node, Now);
+        var viewModel = new CommentViewModel(node, Now, AnonymousApi());
 
         Assert.Multiple(() =>
         {
@@ -135,7 +135,7 @@ internal sealed class CommentViewModelTests
     [Test]
     public void CollapsingFlipsTheGlyphAsWellAsTheState()
     {
-        var viewModel = new CommentViewModel(Sample.CommentNode(), Now);
+        var viewModel = new CommentViewModel(Sample.CommentNode(), Now, AnonymousApi());
 
         Assert.That(viewModel.ToggleLabel, Is.EqualTo("−"));
 
@@ -152,7 +152,7 @@ internal sealed class CommentViewModelTests
     [TestCase(12, "12 more replies")]
     public void UnloadedRepliesReadNaturally(int childCount, string expected)
     {
-        var viewModel = new CommentViewModel(Sample.CommentNode(1, "0.1", childCount), Now);
+        var viewModel = new CommentViewModel(Sample.CommentNode(1, "0.1", childCount), Now, AnonymousApi());
 
         Assert.Multiple(() =>
         {
@@ -175,5 +175,13 @@ internal sealed class CommentViewModelTests
         Comment deleted = Sample.Comment(content: "the original text") with { IsDeleted = true };
 
         Assert.That(deleted.VisibleContent.Value, Is.EqualTo("*Deleted by author*"));
+    }
+
+    /// <summary>A client with no session, which is what a comment gets when nobody is signed in.</summary>
+    private static ILemmyApi AnonymousApi()
+    {
+        ILemmyApi api = Substitute.For<ILemmyApi>();
+        api.IsAuthenticated.Returns(false);
+        return api;
     }
 }

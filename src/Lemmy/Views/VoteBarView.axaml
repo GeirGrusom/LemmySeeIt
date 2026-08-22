@@ -1,0 +1,53 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:Lemmy.ViewModels"
+             mc:Ignorable="d"
+             x:Class="Lemmy.Views.VoteBarView"
+             x:DataType="vm:VoteBarViewModel">
+
+    <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+
+        <!-- Signed out there is nothing to press, so the score stays the plain badge it always was
+             rather than two arrows that do nothing. -->
+        <StackPanel Orientation="Horizontal" Spacing="4"
+                    VerticalAlignment="Center"
+                    IsVisible="{Binding !CanVote}">
+            <TextBlock Classes="meta" Text="&#x25B2;" />
+            <TextBlock Classes="meta" Text="{Binding ScoreLabel}" />
+        </StackPanel>
+
+        <StackPanel Orientation="Horizontal" Spacing="2"
+                    VerticalAlignment="Center"
+                    IsVisible="{Binding CanVote}">
+            <Button Classes="vote up"
+                    Classes.cast="{Binding IsUpvoted}"
+                    Command="{Binding UpvoteCommand}"
+                    ToolTip.Tip="Upvote"
+                    Content="&#x25B2;" />
+
+            <TextBlock Classes="meta"
+                       MinWidth="26"
+                       TextAlignment="Center"
+                       VerticalAlignment="Center"
+                       Text="{Binding ScoreLabel}" />
+
+            <Button Classes="vote down"
+                    Classes.cast="{Binding IsDownvoted}"
+                    Command="{Binding DownvoteCommand}"
+                    ToolTip.Tip="Downvote"
+                    Content="&#x25BC;" />
+        </StackPanel>
+
+        <!-- A vote that did not take has already been rolled back on screen; without this the
+             arrow would just spring back with no reason given. -->
+        <TextBlock Classes="meta"
+                   Foreground="{DynamicResource NegativeText}"
+                   MaxWidth="180"
+                   TextTrimming="CharacterEllipsis"
+                   ToolTip.Tip="{Binding ErrorMessage}"
+                   IsVisible="{Binding ErrorMessage, Converter={x:Static ObjectConverters.IsNotNull}}"
+                   Text="{Binding ErrorMessage}" />
+    </StackPanel>
+</UserControl>

@@ -32,6 +32,12 @@ internal sealed class StubHttpMessageHandler : HttpMessageHandler
     /// <summary>Every URL that was requested, in order.</summary>
     internal IReadOnlyList<Uri> RequestedUris => requestedUris;
 
+    /// <summary>The body of the last request that carried one, so a write can be asserted on.</summary>
+    internal string? SentBody { get; private set; }
+
+    /// <summary>The method of the last request.</summary>
+    internal HttpMethod? SentMethod { get; private set; }
+
     /// <summary>The only URL that was requested.</summary>
     internal Uri SingleRequestedUri => requestedUris.Single();
 
@@ -51,6 +57,8 @@ internal sealed class StubHttpMessageHandler : HttpMessageHandler
         }
 
         SentAuthorization = request.Headers.Authorization?.ToString();
+        SentMethod = request.Method;
+        SentBody = request.Content?.ReadAsStringAsync(cancellationToken).GetAwaiter().GetResult();
 
         return Task.FromResult(respond(request));
     }

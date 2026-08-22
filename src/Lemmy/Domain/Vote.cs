@@ -26,4 +26,14 @@ public static class VoteExtensions
         < 0 => Vote.Down,
         _ => Vote.None,
     };
+
+    /// <summary>
+    /// What pressing <paramref name="pressed"/> does to <paramref name="current"/>. Pressing the
+    /// arrow you already chose takes the vote back rather than casting it again, which is what every
+    /// site with these arrows does and what Lemmy's own score of <c>0</c> means.
+    /// </summary>
+    public static Vote Toggle(this Vote current, Vote pressed) => current == pressed ? Vote.None : pressed;
+
+    /// <summary>The number Lemmy wants for a vote: <c>1</c>, <c>0</c> or <c>-1</c>.</summary>
+    public static int ToScore(this Vote vote) => (int)vote;
 }
