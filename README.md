@@ -4,8 +4,8 @@ A reading client for [Lemmy](https://join-lemmy.org), the federated link-aggrega
 refugees landed on. Browse an instance's front page, drill into a community, read a comment thread,
 search, and switch between servers. Sign in and you also get your subscribed feed.
 
-Signed in you can vote on posts and comments and subscribe to communities. Writing otherwise —
-posting and commenting — is not built yet, and each post links out to its page on the web for that.
+Signed in you can vote, subscribe to communities, and comment — write one, reply to one, and edit or
+delete your own. Submitting posts is not built yet, and each post links out to its page on the web.
 
 Runs on Windows, Linux and Android from one shared codebase, with an iOS head that is kept
 compiling-ready.
@@ -137,6 +137,11 @@ community you follow carry a green tick beside the community name, and subscribi
 every row already on screen without a refresh. The **Subscribed** listing on the feed is what
 following a community is for.
 
+**Commenting.** Signed in, a box above the thread adds a comment to the post, and every comment has
+a **Reply**. Your own comments also offer **Edit** and **Delete**; a deleted comment leaves its
+placeholder in the thread — so the replies under it still hang off something — and you can
+**Restore** it afterwards. Comments are written as Markdown, the same Markdown the app renders.
+
 **Communities and search.** Communities lists the directory for the current server, and Search
 covers both posts and communities on it.
 
@@ -153,8 +158,9 @@ images until tapped. Signing in adopts whatever your account already has set.
 
 ## Limitations
 
-- Commenting and posting are not wired up; each post links out to the web instead. Voting and
-  subscribing are what this client writes.
+- Submitting posts is not wired up; each post links out to the web instead. Voting, subscribing and
+  commenting are what this client writes.
+- The comment box is a plain Markdown text area: no formatting toolbar and no preview.
 - AVIF images do not decode, so those posts show the server's preview rather than the original.
 - A comment thread is fetched eight levels deep in one request; "12 more replies" is shown but not
   yet loadable, and the thread has no pull-to-refresh.

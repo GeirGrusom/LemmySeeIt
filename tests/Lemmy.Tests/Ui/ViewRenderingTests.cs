@@ -646,4 +646,107 @@ internal sealed class ViewRenderingTests
 
         Assert.That(VisibleText(window), Does.Not.Contain("Subscribe"));
     }
+
+    private static async Task<PostDetailViewModel> LoadedPostAsync(TestServices services)
+    {
+        services.Api.GetCommentsAsync(Arg.Any<CommentQuery>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(new CommentThread([Sample.CommentNode()])));
+
+        var page = new PostDetailViewModel(
+            services.Services, new RecordingNavigator(), services.Api, Sample.PostSummary(), AppSettings.Default);
+        await page.LoadAsync();
+        return page;
+    }
+
+    [AvaloniaTest]
+    public async Task SignedInThePostPageOffersABoxToComment()
+    {
+        var services = new TestServices();
+        services.Api.IsAuthenticated.Returns(true);
+        using PostDetailViewModel page = await LoadedPostAsync(services);
+
+        Window window = Show(new PostDetailView(), page);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(page.CanComment, Is.True);
+            Assert.That(
+                Descendants(window).OfType<CommentComposerView>().Any(view => view.IsEffectivelyVisible),
+                Is.True);
+            Assert.That(VisibleText(window), Does.Contain("Post"));
+        });
+    }
+
+    [AvaloniaTest]
+    public async Task SignedOutThereIsNoBoxToComment()
+    {
+        var services = new TestServices();
+        services.Api.IsAuthenticated.Returns(false);
+        using PostDetailViewModel page = await LoadedPostAsync(services);
+
+        Window window = Show(new PostDetailView(), page);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(page.CanComment, Is.False);
+            Assert.That(
+                Descendants(window).OfType<CommentComposerView>().Any(view => view.IsEffectivelyVisible),
+                Is.False);
+        });
+    }
+
+    [AvaloniaTest]
+    public async Task TheReadersOwnCommentOffersEditAndDelete()
+    {
+        var services = new TestServices();
+        services.Api.IsAuthenticated.Returns(true);
+
+        // Sample comments are written by person 1.
+        services.Account.Set(new Account(new PersonId(1), new Username("someone"), null, Sample.Instance, null));
+        using PostDetailViewModel page = await LoadedPostAsync(services);
+
+        Window window = Show(new PostDetailView(), page);
+
+        Assert.That(VisibleText(window), Does.Contain("Edit").And.Contain("Delete").And.Contain("Reply"));
+    }
+
+    [AvaloniaTest]
+    public async Task SomebodyElsesCommentOffersOnlyReply()
+    {
+        var services = new TestServices();
+        services.Api.IsAuthenticated.Returns(true);
+        services.Account.Set(new Account(new PersonId(99), new Username("stranger"), null, Sample.Instance, null));
+        using PostDetailViewModel page = await LoadedPostAsync(services);
+
+        Window window = Show(new PostDetailView(), page);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(VisibleText(window), Does.Contain("Reply"));
+            Assert.That(VisibleText(window), Does.Not.Contain("Delete"));
+        });
+    }
+
+    [AvaloniaTest]
+    public async Task PostingACommentPutsItAtTheTopOfTheThread()
+    {
+        var services = new TestServices();
+        services.Api.IsAuthenticated.Returns(true);
+        services.Api.CreateCommentAsync(
+                Arg.Any<PostId>(), Arg.Any<CommentId?>(), Arg.Any<CommentDraft>(), Arg.Any<CancellationToken>())
+            .Returns(Sample.CommentNode(id: 500, path: "0.500"));
+
+        using PostDetailViewModel page = await LoadedPostAsync(services);
+        Show(new PostDetailView(), page);
+
+        page.Composer.Text = "Freshly written";
+        await page.Composer.SubmitCommand.ExecuteAsync(null);
+        Settle();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(page.Comments, Has.Count.EqualTo(2));
+            Assert.That(page.Comments[0].Node.Comment.Id, Is.EqualTo(new CommentId(500)));
+        });
+    }
 }

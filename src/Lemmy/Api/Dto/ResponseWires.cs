@@ -120,6 +120,33 @@ internal sealed record CommentResponse
     public CommentViewWire? CommentView { get; init; }
 }
 
+/// <summary>The body sent to <c>POST /api/v3/comment</c>.</summary>
+internal sealed record CreateCommentRequestWire
+{
+    public string? Content { get; init; }
+
+    public int PostId { get; init; }
+
+    /// <summary>The comment being replied to; absent for a reply to the post itself.</summary>
+    public int? ParentId { get; init; }
+}
+
+/// <summary>The body sent to <c>PUT /api/v3/comment</c>.</summary>
+internal sealed record EditCommentRequestWire
+{
+    public int CommentId { get; init; }
+
+    public string? Content { get; init; }
+}
+
+/// <summary>The body sent to <c>POST /api/v3/comment/delete</c>.</summary>
+internal sealed record DeleteCommentRequestWire
+{
+    public int CommentId { get; init; }
+
+    public bool Deleted { get; init; }
+}
+
 /// <summary>The body of <c>POST /api/v3/community/follow</c>.</summary>
 internal sealed record CommunityResponse
 {

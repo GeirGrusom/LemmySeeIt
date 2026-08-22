@@ -90,6 +90,48 @@ public interface ILemmyApi
         bool follow,
         CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Posts a comment, either on the post itself or as a reply to another comment.
+    /// </summary>
+    /// <param name="postId">The post being commented on.</param>
+    /// <param name="parentId">The comment being replied to, or <see langword="null"/> for the post.</param>
+    /// <param name="draft">What to say.</param>
+    /// <param name="cancellationToken">Abandons the request.</param>
+    /// <exception cref="LemmyApiException">
+    /// Nobody is signed in, the post is locked, the account is banned from the community, or the
+    /// instance sent back something unusable.
+    /// </exception>
+    Task<CommentNode> CreateCommentAsync(
+        PostId postId,
+        CommentId? parentId,
+        CommentDraft draft,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Rewrites a comment. Answers with the comment alone rather than a node: the replies below it
+    /// are unchanged and the response does not carry them.
+    /// </summary>
+    /// <exception cref="LemmyApiException">
+    /// Nobody is signed in, the comment is not the account's, or the instance refused the edit.
+    /// </exception>
+    Task<Comment> EditCommentAsync(
+        CommentId commentId,
+        CommentDraft draft,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Deletes a comment, or restores one already deleted. Lemmy's delete is a flag rather than a
+    /// removal — the comment keeps its place in the thread so the replies below it still hang off
+    /// something — which is what makes restoring possible at all.
+    /// </summary>
+    /// <exception cref="LemmyApiException">
+    /// Nobody is signed in, the comment is not the account's, or the instance refused.
+    /// </exception>
+    Task<Comment> SetCommentDeletedAsync(
+        CommentId commentId,
+        bool deleted,
+        CancellationToken cancellationToken = default);
+
     /// <summary>Fetches the instance's own description and totals.</summary>
     /// <exception cref="LemmyApiException">The server refused the request or sent something unusable.</exception>
     Task<SiteSummary> GetSiteAsync(CancellationToken cancellationToken = default);

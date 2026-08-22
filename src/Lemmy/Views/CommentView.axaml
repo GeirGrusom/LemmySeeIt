@@ -32,11 +32,52 @@
                     <views:VoteBarView DataContext="{Binding Votes}" />
                     <TextBlock Classes="meta" Text="·" />
                     <TextBlock Classes="meta" Text="{Binding AgeLabel}" />
+                    <TextBlock Classes="meta"
+                               IsVisible="{Binding WasEdited}"
+                               ToolTip.Tip="Edited since it was posted"
+                               Text="· edited" />
                 </StackPanel>
 
                 <md:MarkdownView IsVisible="{Binding !IsCollapsed}"
                                  Blocks="{Binding Content}"
                                  LinkCommand="{Binding LinkCommand}" />
+
+                <!-- Reply, and the author's own controls. Only shown unfolded: a collapsed comment
+                     is one the reader has put away. -->
+                <!-- Generous spacing: these sit side by side and one of them is Delete. -->
+                <StackPanel Orientation="Horizontal"
+                            Spacing="18"
+                            IsVisible="{Binding !IsCollapsed}">
+                    <Button Classes="link"
+                            Content="Reply"
+                            IsVisible="{Binding CanReply}"
+                            Command="{Binding ReplyCommand}" />
+                    <Button Classes="link"
+                            Content="Edit"
+                            IsVisible="{Binding CanAmend}"
+                            Command="{Binding EditCommand}" />
+                    <Button Classes="link"
+                            Content="Delete"
+                            IsVisible="{Binding CanAmend}"
+                            IsEnabled="{Binding !IsAmending}"
+                            Command="{Binding ToggleDeletedCommand}" />
+                    <Button Classes="link"
+                            Content="Restore"
+                            IsVisible="{Binding CanRestore}"
+                            IsEnabled="{Binding !IsAmending}"
+                            Command="{Binding ToggleDeletedCommand}" />
+                </StackPanel>
+
+                <TextBlock Classes="meta"
+                           TextWrapping="Wrap"
+                           Foreground="{DynamicResource NegativeText}"
+                           IsVisible="{Binding ActionError, Converter={x:Static ObjectConverters.IsNotNull}}"
+                           Text="{Binding ActionError}" />
+
+                <StackPanel Margin="0,4,0,0"
+                            IsVisible="{Binding Composer, Converter={x:Static ObjectConverters.IsNotNull}}">
+                    <views:CommentComposerView DataContext="{Binding Composer}" />
+                </StackPanel>
 
                 <TextBlock Classes="meta"
                            Foreground="{DynamicResource SecondaryText}"

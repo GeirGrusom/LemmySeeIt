@@ -121,7 +121,7 @@ internal sealed class CommentViewModelTests
             1, "0.1", 2,
             Sample.CommentNode(2, "0.1.2", 1, Sample.CommentNode(3, "0.1.2.3")));
 
-        var viewModel = new CommentViewModel(node, Now, AnonymousApi());
+        var viewModel = new CommentViewModel(node, Now, AnonymousApi(), new CurrentAccount());
 
         Assert.Multiple(() =>
         {
@@ -135,7 +135,7 @@ internal sealed class CommentViewModelTests
     [Test]
     public void CollapsingFlipsTheGlyphAsWellAsTheState()
     {
-        var viewModel = new CommentViewModel(Sample.CommentNode(), Now, AnonymousApi());
+        var viewModel = new CommentViewModel(Sample.CommentNode(), Now, AnonymousApi(), new CurrentAccount());
 
         Assert.That(viewModel.ToggleLabel, Is.EqualTo("−"));
 
@@ -152,7 +152,7 @@ internal sealed class CommentViewModelTests
     [TestCase(12, "12 more replies")]
     public void UnloadedRepliesReadNaturally(int childCount, string expected)
     {
-        var viewModel = new CommentViewModel(Sample.CommentNode(1, "0.1", childCount), Now, AnonymousApi());
+        var viewModel = new CommentViewModel(Sample.CommentNode(1, "0.1", childCount), Now, AnonymousApi(), new CurrentAccount());
 
         Assert.Multiple(() =>
         {

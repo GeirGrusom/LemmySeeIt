@@ -341,6 +341,93 @@ public sealed class LemmyApiClient : ILemmyApi
         return response.CommunityView?.Subscribed.ToSubscriptionState() ?? SubscriptionState.NotSubscribed;
     }
 
+    /// <inheritdoc />
+    public async Task<CommentNode> CreateCommentAsync(
+        PostId postId,
+        CommentId? parentId,
+        CommentDraft draft,
+        CancellationToken cancellationToken = default)
+    {
+        RequireSession("comment");
+        RequireDraft(draft);
+
+        CommentResponse response = await PostAsync(
+            ApiRoot + "comment",
+            new CreateCommentRequestWire
+            {
+                Content = draft.Value,
+                PostId = postId.Value,
+                ParentId = parentId?.Value,
+            },
+            LemmyJson.Context.CreateCommentRequestWire,
+            LemmyJson.Context.CommentResponse,
+            cancellationToken).ConfigureAwait(false);
+
+        if (WireMapper.TryMapCommentNode(response.CommentView, out CommentNode node))
+        {
+            return node;
+        }
+
+        throw new LemmyApiException($"{Instance.Value} accepted the comment but did not send it back.");
+    }
+
+    /// <inheritdoc />
+    public async Task<Comment> EditCommentAsync(
+        CommentId commentId,
+        CommentDraft draft,
+        CancellationToken cancellationToken = default)
+    {
+        RequireSession("edit a comment");
+        RequireDraft(draft);
+
+        CommentResponse response = await SendAsync(
+            HttpMethod.Put,
+            ApiRoot + "comment",
+            new EditCommentRequestWire { CommentId = commentId.Value, Content = draft.Value },
+            LemmyJson.Context.EditCommentRequestWire,
+            LemmyJson.Context.CommentResponse,
+            cancellationToken).ConfigureAwait(false);
+
+        return ReadComment(response, "edit");
+    }
+
+    /// <inheritdoc />
+    public async Task<Comment> SetCommentDeletedAsync(
+        CommentId commentId,
+        bool deleted,
+        CancellationToken cancellationToken = default)
+    {
+        RequireSession(deleted ? "delete a comment" : "restore a comment");
+
+        CommentResponse response = await PostAsync(
+            ApiRoot + "comment/delete",
+            new DeleteCommentRequestWire { CommentId = commentId.Value, Deleted = deleted },
+            LemmyJson.Context.DeleteCommentRequestWire,
+            LemmyJson.Context.CommentResponse,
+            cancellationToken).ConfigureAwait(false);
+
+        return ReadComment(response, deleted ? "delete" : "restore");
+    }
+
+    private Comment ReadComment(CommentResponse response, string action)
+    {
+        if (WireMapper.TryMapComment(response.CommentView?.Comment, out Comment comment))
+        {
+            return comment;
+        }
+
+        throw new LemmyApiException($"{Instance.Value} accepted the {action} but did not send the comment back.");
+    }
+
+    /// <summary>Catches an empty body here rather than letting the server phrase the complaint.</summary>
+    private static void RequireDraft(CommentDraft draft)
+    {
+        if (!draft.IsValid)
+        {
+            throw new LemmyApiException("A comment needs something in it.");
+        }
+    }
+
     /// <summary>
     /// Fails before the request rather than after it. An unauthenticated write is answered by Lemmy
     /// with a generic error, and "not_logged_in" is not something to put in front of a reader.
@@ -374,7 +461,17 @@ public sealed class LemmyApiClient : ILemmyApi
         }
     }
 
-    private async Task<TResponse> PostAsync<TRequest, TResponse>(
+    private Task<TResponse> PostAsync<TRequest, TResponse>(
+        string endpoint,
+        TRequest body,
+        System.Text.Json.Serialization.Metadata.JsonTypeInfo<TRequest> requestInfo,
+        System.Text.Json.Serialization.Metadata.JsonTypeInfo<TResponse> responseInfo,
+        CancellationToken cancellationToken)
+        where TResponse : class =>
+        SendAsync(HttpMethod.Post, endpoint, body, requestInfo, responseInfo, cancellationToken);
+
+    private async Task<TResponse> SendAsync<TRequest, TResponse>(
+        HttpMethod method,
         string endpoint,
         TRequest body,
         System.Text.Json.Serialization.Metadata.JsonTypeInfo<TRequest> requestInfo,
@@ -382,7 +479,7 @@ public sealed class LemmyApiClient : ILemmyApi
         CancellationToken cancellationToken)
         where TResponse : class
     {
-        var request = new HttpRequestMessage(HttpMethod.Post, new Uri(Instance.BaseUri, endpoint))
+        var request = new HttpRequestMessage(method, new Uri(Instance.BaseUri, endpoint))
         {
             Content = new StringContent(
                 JsonSerializer.Serialize(body, requestInfo),

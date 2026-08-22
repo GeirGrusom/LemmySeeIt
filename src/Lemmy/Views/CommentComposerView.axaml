@@ -1,0 +1,47 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:Lemmy.ViewModels"
+             mc:Ignorable="d" d:DesignWidth="420"
+             x:Class="Lemmy.Views.CommentComposerView"
+             x:DataType="vm:CommentComposerViewModel">
+
+    <StackPanel Spacing="6">
+        <TextBox Text="{Binding Text}"
+                 Watermark="{Binding Placeholder}"
+                 AcceptsReturn="True"
+                 TextWrapping="Wrap"
+                 MinHeight="76"
+                 MaxHeight="240"
+                 IsEnabled="{Binding !IsBusy}" />
+
+        <StackPanel Orientation="Horizontal" Spacing="8">
+            <Button Classes="accent"
+                    Content="{Binding SubmitLabel}"
+                    Command="{Binding SubmitCommand}" />
+
+            <Button Content="Cancel"
+                    IsVisible="{Binding CanDismiss}"
+                    IsEnabled="{Binding !IsBusy}"
+                    Command="{Binding DismissCommand}" />
+
+            <ProgressBar IsIndeterminate="True"
+                         Width="70"
+                         Height="3"
+                         VerticalAlignment="Center"
+                         IsVisible="{Binding IsBusy}" />
+
+            <TextBlock Classes="meta"
+                       VerticalAlignment="Center"
+                       IsVisible="{Binding IsOverLength}"
+                       Text="{Binding LengthLabel}" />
+        </StackPanel>
+
+        <TextBlock Classes="meta"
+                   TextWrapping="Wrap"
+                   Foreground="{DynamicResource NegativeText}"
+                   IsVisible="{Binding ErrorMessage, Converter={x:Static ObjectConverters.IsNotNull}}"
+                   Text="{Binding ErrorMessage}" />
+    </StackPanel>
+</UserControl>

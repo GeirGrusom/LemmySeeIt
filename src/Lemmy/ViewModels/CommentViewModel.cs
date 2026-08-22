@@ -17,6 +17,11 @@ namespace Lemmy.ViewModels;
 /// </summary>
 public sealed partial class CommentViewModel : ViewModelBase
 {
+    private readonly ILemmyApi api;
+    private readonly CurrentAccount account;
+    private readonly DateTimeOffset now;
+    private readonly ICommand? linkCommand;
+
     /// <summary>Wraps a comment for display.</summary>
     /// <param name="node">The comment and its replies.</param>
     /// <param name="now">The current time, for the age label.</param>
@@ -25,10 +30,21 @@ public sealed partial class CommentViewModel : ViewModelBase
     /// Opens a link pressed inside the comment. Passed down the tree rather than resolved per
     /// comment: a thread is hundreds of these, and they all open links the same way.
     /// </param>
-    public CommentViewModel(CommentNode node, DateTimeOffset now, ILemmyApi api, ICommand? linkCommand = null)
+    public CommentViewModel(
+        CommentNode node,
+        DateTimeOffset now,
+        ILemmyApi api,
+        CurrentAccount account,
+        ICommand? linkCommand = null)
     {
         ArgumentNullException.ThrowIfNull(node);
         ArgumentNullException.ThrowIfNull(api);
+        ArgumentNullException.ThrowIfNull(account);
+
+        this.api = api;
+        this.account = account;
+        this.now = now;
+        this.linkCommand = linkCommand;
 
         Node = node;
         LinkCommand = linkCommand;
@@ -40,11 +56,11 @@ public sealed partial class CommentViewModel : ViewModelBase
             (vote, token) => api.VoteOnCommentAsync(node.Comment.Id, vote, token));
 
         Replies = new ObservableCollection<CommentViewModel>(
-            node.Replies.Select(reply => new CommentViewModel(reply, now, api, linkCommand)));
+            node.Replies.Select(reply => new CommentViewModel(reply, now, api, account, linkCommand)));
     }
 
     /// <summary>The comment and its replies.</summary>
-    public CommentNode Node { get; }
+    public CommentNode Node { get; private set; }
 
     /// <summary>The direct replies, already wrapped.</summary>
     public ObservableCollection<CommentViewModel> Replies { get; }
@@ -53,7 +69,7 @@ public sealed partial class CommentViewModel : ViewModelBase
     /// The comment body, parsed into blocks, with removed and deleted comments already substituted
     /// for their placeholder.
     /// </summary>
-    public ImmutableArray<MarkdownBlock> Content { get; }
+    public ImmutableArray<MarkdownBlock> Content { get; private set; }
 
     /// <summary>Opens a link pressed inside this comment.</summary>
     public ICommand? LinkCommand { get; }
@@ -94,4 +110,123 @@ public sealed partial class CommentViewModel : ViewModelBase
     /// <summary>Folds or unfolds this comment's replies.</summary>
     [RelayCommand]
     private void ToggleCollapsed() => IsCollapsed = !IsCollapsed;
+
+    /// <summary>Whether this comment is the reader's own, and so theirs to change.</summary>
+    public bool IsOwn => account.Owns(Node.Comment.CreatorId);
+
+    /// <summary>Whether the author has deleted it.</summary>
+    public bool IsDeleted => Node.Comment.IsDeleted;
+
+    /// <summary>Whether the reader can edit or delete it: their own, and not already gone.</summary>
+    public bool CanAmend => IsOwn && !IsDeleted;
+
+    /// <summary>Whether the reader can put back one of their own they deleted.</summary>
+    public bool CanRestore => IsOwn && IsDeleted;
+
+    /// <summary>Whether anybody is signed in to reply at all.</summary>
+    public bool CanReply => api.IsAuthenticated && !IsDeleted;
+
+    /// <summary>Whether the comment has been edited since it was posted.</summary>
+    public bool WasEdited => Node.Comment.Updated is not null;
+
+    /// <summary>The open reply or edit box, or <see langword="null"/> when neither is open.</summary>
+    [ObservableProperty]
+    private CommentComposerViewModel? composer;
+
+    /// <summary>Why the last delete or restore did not take, or <see langword="null"/>.</summary>
+    [ObservableProperty]
+    private string? actionError;
+
+    /// <summary>Set while a delete or restore is in flight.</summary>
+    [ObservableProperty]
+    private bool isAmending;
+
+    /// <summary>Opens a box to reply to this comment.</summary>
+    [RelayCommand]
+    private void Reply() =>
+        Composer = new CommentComposerViewModel(
+            ComposerPurpose.Reply,
+            PostReplyAsync,
+            () => Composer = null);
+
+    /// <summary>Opens a box to rewrite this comment, prefilled with what it says.</summary>
+    [RelayCommand]
+    private void Edit() =>
+        Composer = new CommentComposerViewModel(
+            ComposerPurpose.Edit,
+            SaveEditAsync,
+            () => Composer = null,
+            Node.Comment.Content.Value);
+
+    /// <summary>Deletes this comment, or puts it back if it is already deleted.</summary>
+    [RelayCommand]
+    private async Task ToggleDeletedAsync(CancellationToken cancellationToken)
+    {
+        bool deleted = !IsDeleted;
+        IsAmending = true;
+        ActionError = null;
+
+        try
+        {
+            Comment updated = await api
+                .SetCommentDeletedAsync(Node.Comment.Id, deleted, cancellationToken)
+                .ConfigureAwait(true);
+
+            Adopt(updated);
+        }
+        catch (OperationCanceledException)
+        {
+            // The page went away.
+        }
+        catch (LemmyApiException exception)
+        {
+            ActionError = exception.Message;
+        }
+        finally
+        {
+            IsAmending = false;
+        }
+    }
+
+    private async Task PostReplyAsync(CommentDraft draft, CancellationToken cancellationToken)
+    {
+        CommentNode reply = await api
+            .CreateCommentAsync(Node.Comment.PostId, Node.Comment.Id, draft, cancellationToken)
+            .ConfigureAwait(true);
+
+        // Newest first, and at the top where it can be seen: the thread's sort is the server's
+        // opinion of a comment that did not exist when it was asked.
+        Replies.Insert(0, new CommentViewModel(reply, now, api, account, linkCommand));
+
+        IsCollapsed = false;
+        OnPropertyChanged(nameof(HasReplies));
+        OnPropertyChanged(nameof(HasUnloadedReplies));
+    }
+
+    private async Task SaveEditAsync(CommentDraft draft, CancellationToken cancellationToken)
+    {
+        Comment updated = await api
+            .EditCommentAsync(Node.Comment.Id, draft, cancellationToken)
+            .ConfigureAwait(true);
+
+        Adopt(updated);
+    }
+
+    /// <summary>
+    /// Takes on a rewritten comment, keeping the replies. The write endpoints answer with the
+    /// comment alone, so replacing the whole node would silently drop the thread below it.
+    /// </summary>
+    private void Adopt(Comment updated)
+    {
+        Node = Node with { Comment = updated };
+        Content = MarkdownParser.Parse(updated.VisibleContent);
+
+        OnPropertyChanged(nameof(Node));
+        OnPropertyChanged(nameof(Content));
+        OnPropertyChanged(nameof(IsDeleted));
+        OnPropertyChanged(nameof(CanAmend));
+        OnPropertyChanged(nameof(CanRestore));
+        OnPropertyChanged(nameof(CanReply));
+        OnPropertyChanged(nameof(WasEdited));
+    }
 }

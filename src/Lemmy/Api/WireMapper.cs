@@ -194,6 +194,34 @@ internal static class WireMapper
     /// view again, but only the tally and the account's own vote can have changed, so that is all
     /// this takes — the caller already has the rest on screen.
     /// </summary>
+    /// <summary>
+    /// Maps a single comment view — what the write endpoints answer with. The replies are empty
+    /// because the response carries none, which is the truth for a comment just posted and is why
+    /// editing and deleting take <see cref="TryMapComment"/> instead: those have replies already, and
+    /// an empty list would throw them away.
+    /// </summary>
+    internal static bool TryMapCommentNode(CommentViewWire? wire, out CommentNode node)
+    {
+        node = null!;
+
+        if (wire is null
+            || !TryMapComment(wire.Comment, out Comment comment)
+            || !TryMapPerson(wire.Creator, out Person creator))
+        {
+            return false;
+        }
+
+        node = new CommentNode(
+            comment,
+            creator,
+            MapTally(wire.Counts),
+            wire.CreatorIsModerator,
+            wire.CreatorIsAdmin,
+            [],
+            wire.MyVote.ToVote());
+        return true;
+    }
+
     internal static VoteOutcome MapVoteOutcome(PostViewWire? wire)
     {
         PostTally tally = MapTally(wire?.Counts);

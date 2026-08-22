@@ -69,6 +69,31 @@ to travel to the community's home instance and be acknowledged, which is not ins
 failure. Pending counts as following, so the button unsubscribes rather than trying to follow twice.
 The optimistic state is Pending too, for the same reason: it is the honest guess.
 
+## Writing a comment
+
+One composer serves all three jobs — a new comment, a reply, an edit — because they differ only in
+what the button says and where the result goes.
+
+What it must never do is lose what was typed. The box is cleared only after the server has accepted
+the comment, never before, and a failure leaves both the text and the reason on screen. That is not
+hypothetical: lemmy.world refuses posting from VPN exit nodes with a 401, and the first real comment
+this app tried to make came back exactly that way.
+
+Editing takes the comment back from the server and keeps the node's replies. The edit and delete
+endpoints answer with the comment alone, and adopting their whole view would replace a node that has
+a thread under it with one that has none.
+
+Deleting is a flag rather than a removal, which is Lemmy's own model: the comment keeps its place so
+that replies below it still have a parent, and the reader sees the placeholder. Because it is a
+flag, it can be turned off again, so the author gets a **Restore** where the delete used to be. An
+irreversible destructive action one tap away from an edit button is a bad trade for the one line of
+code that undoes it.
+
+A comment shows Edit and Delete only to the account that wrote it, matched by person id. A session
+restored while offline knows its own name but not its id, and an unknown id owns nothing — better to
+withhold the buttons from the rightful owner for one launch than to offer them on somebody else's
+comment.
+
 ## Links go to the browser
 
 A link post's URL is a control rather than a line of text, and every post also offers "open on the

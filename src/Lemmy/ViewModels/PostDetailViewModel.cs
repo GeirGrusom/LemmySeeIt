@@ -59,6 +59,10 @@ public sealed partial class PostDetailViewModel : PageViewModel
             services.Subscriptions,
             (follow, token) => api.SetSubscriptionAsync(summary.Community.Id, follow, token));
 
+        // The post's own box is always there rather than opening on demand: it is the primary thing
+        // to do on this page, and a button that reveals a box is one tap more for every comment.
+        Composer = new CommentComposerViewModel(ComposerPurpose.Comment, PostCommentAsync);
+
         Votes = new VoteBarViewModel(
             new VoteOutcome(summary.MyVote, summary.Tally.Score, summary.Tally.Upvotes, summary.Tally.Downvotes),
             api.IsAuthenticated,
@@ -73,6 +77,12 @@ public sealed partial class PostDetailViewModel : PageViewModel
 
     /// <summary>The subscribe control for the community the post is in.</summary>
     public SubscribeButtonViewModel Subscription { get; }
+
+    /// <summary>The box for adding a comment to the post.</summary>
+    public CommentComposerViewModel Composer { get; }
+
+    /// <summary>Whether anybody is signed in to comment at all.</summary>
+    public bool CanComment => api.IsAuthenticated && !Summary.Post.IsLocked;
 
     /// <inheritdoc />
     public override string Title => Summary.Post.Title.Value;
@@ -157,7 +167,7 @@ public sealed partial class PostDetailViewModel : PageViewModel
         DateTimeOffset now = Services.Now;
         foreach (CommentNode root in thread.Roots)
         {
-            Comments.Add(new CommentViewModel(root, now, api, OpenMarkdownLinkCommand));
+            Comments.Add(new CommentViewModel(root, now, api, Services.Account, OpenMarkdownLinkCommand));
         }
 
         HasNoComments = Comments.Count == 0;
@@ -212,6 +222,18 @@ public sealed partial class PostDetailViewModel : PageViewModel
         }
 
         Image = await Services.ImageLoader.LoadAsync(link, ImageDecodeWidth, Lifetime).ConfigureAwait(true);
+    }
+
+    private async Task PostCommentAsync(CommentDraft draft, CancellationToken cancellationToken)
+    {
+        CommentNode posted = await api
+            .CreateCommentAsync(Summary.Post.Id, null, draft, cancellationToken)
+            .ConfigureAwait(true);
+
+        // At the top, whatever the thread is sorted by: the sort is the server's answer to a
+        // question asked before this comment existed.
+        Comments.Insert(0, new CommentViewModel(posted, Services.Now, api, Services.Account, OpenMarkdownLinkCommand));
+        HasNoComments = false;
     }
 
     /// <inheritdoc />

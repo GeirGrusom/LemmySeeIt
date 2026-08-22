@@ -43,11 +43,14 @@ internal sealed class TestServices
 
         Clock = FixedTimeProvider.AtReference();
         Subscriptions = new SubscriptionTracker();
+        Account = new CurrentAccount();
         Services = new AppServices(
-            ApiFactory, ImageLoader, SettingsStore, LinkOpener, SessionStore, Clock, Subscriptions);
+            ApiFactory, ImageLoader, SettingsStore, LinkOpener, SessionStore, Clock, Subscriptions, Account);
     }
 
     internal SubscriptionTracker Subscriptions { get; }
+
+    internal CurrentAccount Account { get; }
 
     internal ILemmyApi Api { get; }
 

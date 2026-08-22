@@ -23,6 +23,9 @@ namespace Lemmy.Api;
 [JsonSerializable(typeof(GetSiteResponse))]
 [JsonSerializable(typeof(PostResponse))]
 [JsonSerializable(typeof(CommunityResponse))]
+[JsonSerializable(typeof(CreateCommentRequestWire))]
+[JsonSerializable(typeof(EditCommentRequestWire))]
+[JsonSerializable(typeof(DeleteCommentRequestWire))]
 [JsonSerializable(typeof(FollowCommunityRequestWire))]
 [JsonSerializable(typeof(CommentResponse))]
 [JsonSerializable(typeof(VotePostRequestWire))]
@@ -43,9 +46,14 @@ internal static class LemmyJson
 
     private static JsonSerializerOptions CreateOptions()
     {
+        // These have to repeat what JsonSourceGenerationOptions declares: constructing the context
+        // with options replaces the attribute's settings rather than adding to them, so anything
+        // omitted here silently reverts to the default. Leaving out DefaultIgnoreCondition once meant
+        // every optional field went out as an explicit null.
         var options = new JsonSerializerOptions(JsonSerializerDefaults.Web)
         {
             PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
             NumberHandling = JsonNumberHandling.AllowReadingFromString,
             ReadCommentHandling = JsonCommentHandling.Skip,
             AllowTrailingCommas = true,

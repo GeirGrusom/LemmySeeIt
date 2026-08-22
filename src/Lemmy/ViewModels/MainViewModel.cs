@@ -189,6 +189,7 @@ public sealed partial class MainViewModel : ViewModelBase, INavigator, IDisposab
 
             session = found.Token;
             Account = whoami;
+            services.Account.Set(whoami);
 
             await AdoptAccountPreferencesAsync(whoami).ConfigureAwait(true);
         }
@@ -198,6 +199,7 @@ public sealed partial class MainViewModel : ViewModelBase, INavigator, IDisposab
             // the next time the app starts with a working connection.
             session = found.Token;
             Account = new Account(default, found.AccountName, null, instance, null);
+            services.Account.Set(Account);
         }
     }
 
@@ -377,6 +379,7 @@ public sealed partial class MainViewModel : ViewModelBase, INavigator, IDisposab
 
             session = token;
             Account = whoami;
+            services.Account.Set(whoami);
 
             await AdoptAccountPreferencesAsync(whoami).ConfigureAwait(true);
 
@@ -410,6 +413,7 @@ public sealed partial class MainViewModel : ViewModelBase, INavigator, IDisposab
 
         session = default;
         Account = null;
+        services.Account.Set(null);
 
         await services.SessionStore.ClearAsync().ConfigureAwait(true);
         await signedIn.LogOutAsync().ConfigureAwait(true);
@@ -442,6 +446,7 @@ public sealed partial class MainViewModel : ViewModelBase, INavigator, IDisposab
 
         session = default;
         Account = null;
+        services.Account.Set(null);
 
         await services.SessionStore.ClearAsync().ConfigureAwait(true);
         await signedIn.LogOutAsync().ConfigureAwait(true);
