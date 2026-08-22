@@ -454,6 +454,14 @@ public sealed partial class MainViewModel : ViewModelBase, INavigator, IDisposab
         await ShowSectionAsync(AppSection.Feed).ConfigureAwait(true);
     }
 
+    /// <summary>Opens the licences and attribution page.</summary>
+    [RelayCommand]
+    private void ShowAttribution()
+    {
+        IsInstancePickerOpen = false;
+        Push(new AttributionViewModel(services, this));
+    }
+
     /// <summary>Opens or closes the instance picker.</summary>
     [RelayCommand]
     private void ToggleInstancePicker()

@@ -17,6 +17,8 @@
     <Product>LemmySeeIt</Product>
     <Company>LemmySeeIt</Company>
     <Version>0.1.0</Version>
+    <Copyright>Copyright (c) 2026 Henning Moe</Copyright>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <NeutralLanguage>en</NeutralLanguage>
 
     <!-- Every project in this repo must survive trimming + Native AOT analysis. -->

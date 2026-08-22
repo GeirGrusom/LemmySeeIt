@@ -135,6 +135,13 @@
                                IsVisible="{Binding IsSignedIn}"
                                Text="These start out matching the settings on your account." />
 
+                    <Border Height="1" Margin="0,4" Background="{DynamicResource DividerBrush}" />
+
+                    <Button Classes="link"
+                            HorizontalAlignment="Left"
+                            Content="Licences and attribution"
+                            Command="{Binding ShowAttributionCommand}" />
+
                     <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
                         <Button Content="Done" Command="{Binding ToggleInstancePickerCommand}" />
                         <Button Content="Switch instance" Classes="accent" Command="{Binding ApplyInstanceCommand}" />

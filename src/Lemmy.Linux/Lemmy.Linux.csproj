@@ -5,6 +5,7 @@
     <TargetFramework>net10.0</TargetFramework>
     <RootNamespace>Lemmy.Linux</RootNamespace>
     <AssemblyName>LemmySeeIt</AssemblyName>
+    <GenerateAttributionData>true</GenerateAttributionData>
     <ApplicationIcon>../Lemmy/Assets/Icon.ico</ApplicationIcon>
   </PropertyGroup>
 

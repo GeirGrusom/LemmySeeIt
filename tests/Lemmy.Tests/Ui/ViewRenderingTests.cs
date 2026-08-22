@@ -428,4 +428,66 @@ internal sealed class ViewRenderingTests
         Assert.That(frame, Is.Not.Null);
         Assert.That(frame!.PixelSize.Width, Is.GreaterThan(0));
     }
+
+    /// <summary>
+    /// The licences page is built from generated data and embedded text, so a wiring mistake would
+    /// show as an empty page rather than as a failure anywhere else.
+    /// </summary>
+    [AvaloniaTest]
+    public void TheLicencesPageListsThePackagesTheBuildShips()
+    {
+        var services = new TestServices();
+        using var page = new AttributionViewModel(services.Services, new RecordingNavigator());
+
+        Window window = Show(new AttributionView(), page);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(VisibleText(window), Does.Contain("Avalonia"));
+            Assert.That(VisibleText(window), Does.Contain("Third-party packages"));
+            Assert.That(page.Packages, Is.Not.Empty);
+        });
+    }
+
+    [AvaloniaTest]
+    public void TheLicencesPageShowsTheApplicationLicenceInFull()
+    {
+        var services = new TestServices();
+        using var page = new AttributionViewModel(services.Services, new RecordingNavigator());
+
+        Window window = Show(new AttributionView(), page);
+
+        Assert.That(
+            VisibleText(window).Any(text => text.Contains("WITHOUT WARRANTY OF ANY KIND", StringComparison.Ordinal)),
+            Is.True);
+    }
+
+    [AvaloniaTest]
+    public void TheLicencesPageOffersTheTextOfEveryLicenceInPlay()
+    {
+        var services = new TestServices();
+        using var page = new AttributionViewModel(services.Services, new RecordingNavigator());
+
+        Window window = Show(new AttributionView(), page);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(page.LicenceTexts, Is.Not.Empty);
+            Assert.That(page.LicenceTexts.Select(licence => licence.Identifier), Does.Contain("MIT"));
+            Assert.That(VisibleText(window), Does.Contain("MIT"));
+        });
+    }
+
+    [AvaloniaTest]
+    public void TheLicencesPageDrawsPixels()
+    {
+        var services = new TestServices();
+        using var page = new AttributionViewModel(services.Services, new RecordingNavigator());
+        Window window = Show(new AttributionView(), page);
+
+        using Bitmap? frame = window.CaptureRenderedFrame();
+
+        Assert.That(frame, Is.Not.Null);
+        Assert.That(frame!.PixelSize.Width, Is.GreaterThan(0));
+    }
 }

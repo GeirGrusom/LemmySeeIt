@@ -133,6 +133,9 @@ listing to the feed, which is the usual reason to bother, and shows the votes yo
 The account control is in the header, next to the instance name; signing out lives inside the
 account sheet so a stray tap cannot end your session.
 
+**Licences.** Settings also links to the attribution page: this app's licence, the notice for the
+typeface it embeds, and every third-party package it ships, each with its licence and copyright.
+
 **Content flagged NSFW** is hidden by default. Settings has a switch for it, plus one to blur those
 images until tapped. Signing in adopts whatever your account already has set.
 
@@ -151,3 +154,15 @@ images until tapped. Signing in adopts whatever your account already has set.
 
 Why it is built this way — domain typing, AOT, the image pipeline, token storage — is in
 [docs/](docs/README.md).
+
+## License
+
+[MIT](LICENSE). Every dependency is permissive too: MIT for most, Apache-2.0 for the AndroidX
+bindings the Android head carries, BSD-2-Clause for Markdig, and BSD-3-Clause for NSubstitute, which
+is test-only. The embedded Inter typeface is under the [SIL Open Font License](licenses/Inter-OFL-1.1.txt)
+rather than the MIT of the package that ships it.
+
+The app carries all of this itself, under **Settings → Licences and attribution**: its own licence,
+the font notice, and every package with its version, licence and copyright. That list is generated
+during the build from the packages the build actually ships, so it cannot drift from the binary —
+see [docs/architecture.md](docs/architecture.md#attribution-is-generated-not-maintained).

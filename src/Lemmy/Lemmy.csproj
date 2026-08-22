@@ -6,10 +6,22 @@
     <AssemblyName>Lemmy</AssemblyName>
     <!-- Shared code must not assume a desktop window; all views are usable single-view. -->
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <GenerateAttributionData>true</GenerateAttributionData>
   </PropertyGroup>
 
   <ItemGroup>
     <AvaloniaResource Include="Assets\**" />
+  </ItemGroup>
+
+  <!-- Licence texts the attribution page shows. Embedded rather than shipped alongside,
+       because on Android and iOS there is no "alongside" the reader can open, and the OFL
+       asks that its notice travel with the font. The app's own licence is the repository's
+       LICENSE file itself, so the two cannot drift. -->
+  <ItemGroup>
+    <EmbeddedResource Include="$(MSBuildThisFileDirectory)../../licenses/*.txt"
+                      LogicalName="Lemmy.Licences.%(Filename)%(Extension)" />
+    <EmbeddedResource Include="$(MSBuildThisFileDirectory)../../LICENSE"
+                      LogicalName="Lemmy.Licences.LemmySeeIt.txt" />
   </ItemGroup>
 
   <ItemGroup>

@@ -24,6 +24,7 @@ public sealed class ViewLocator : IDataTemplate
         PostDetailViewModel => new PostDetailView(),
         CommunitiesViewModel => new CommunitiesView(),
         SearchViewModel => new SearchView(),
+        AttributionViewModel => new AttributionView(),
         _ => new TextBlock { Text = $"No view for {param?.GetType().Name ?? "null"}." },
     };
 

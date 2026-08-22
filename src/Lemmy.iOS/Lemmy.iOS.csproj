@@ -6,6 +6,7 @@
     <SupportedOSPlatformVersion>14.0</SupportedOSPlatformVersion>
     <RootNamespace>Lemmy.iOS</RootNamespace>
     <AssemblyName>LemmySeeIt</AssemblyName>
+    <GenerateAttributionData>true</GenerateAttributionData>
     <ApplicationId>com.lemmyseeit.app</ApplicationId>
     <ApplicationVersion>1</ApplicationVersion>
     <ApplicationDisplayVersion>0.1.0</ApplicationDisplayVersion>

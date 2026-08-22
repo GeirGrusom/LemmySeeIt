@@ -45,6 +45,32 @@ Lemmy sends a thread as a flat list plus a materialised path (`0.100.200`) on ea
 server's ordering within each level. A comment whose parent is absent becomes a root, which is what
 makes a "load more replies" sub-thread renderable on its own.
 
+## Attribution is generated, not maintained
+
+The licences page lists every third-party package the build ships, and nobody keeps that list by
+hand. An MSBuild task in `build/Attribution.targets` reads the packages MSBuild resolved for the
+project and emits a C# file of `PackageAttribution` values into `obj`, compiled in like any other
+source.
+
+It reads `RuntimeCopyLocalItems` and `NativeCopyLocalItems` rather than `PackageReference`. Those
+are the assets that actually end up beside the binary, which gets three things right at once:
+transitive dependencies are covered, build-only tooling such as ILLink and the AOT compiler is
+excluded because none of it ships, and native asset packs for other platforms are left out — a
+Linux build does not claim to carry the macOS Skia binaries. Each package's licence, copyright and
+project page come from its `.nuspec` in the NuGet cache, so the build needs no network.
+
+Every head ships a different set, so each generates its own and hands it over at startup through
+`Attribution.Use`. The desktop heads carry X11 and D-Bus; the Android head carries AndroidX, which
+is why it lists around 75 packages where the shared project alone has 13. The same mechanism as
+`App.SessionStoreOverride`, and for the same reason: the shared UI cannot know what its host
+brought with it.
+
+Anything a package declines to declare is shown as missing rather than guessed at — a package with
+no licence expression is listed as undeclared with a link to its project page, because inventing an
+answer there would be worse than admitting the gap. Licence *texts* are embedded from `licenses/`
+and shown once each, since the body of MIT is the same for every package under it and only the
+copyright line differs.
+
 ## What it talks to
 
 Lemmy's HTTP API v3 — `post/list`, `post`, `comment/list`, `community/list`, `search` and `site`,

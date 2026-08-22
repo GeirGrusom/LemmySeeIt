@@ -24,6 +24,9 @@ public sealed class MainApplication : AvaloniaAndroidApplication<App>
         // the session in memory, so a sign-in would not survive a restart.
         App.SessionStoreOverride = new KeystoreSessionStore(this);
 
+        // This head carries AndroidX on top of the shared set.
+        Attribution.Use(Generated.GeneratedAttribution.Packages);
+
         base.OnCreate();
     }
 

@@ -1,0 +1,7 @@
+<Project>
+
+  <!-- Generates the attribution list from each project's shipped packages. Inert unless the
+       project sets GenerateAttributionData. -->
+  <Import Project="build\Attribution.targets" />
+
+</Project>

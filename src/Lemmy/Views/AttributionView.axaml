@@ -1,0 +1,89 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:Lemmy.ViewModels"
+             xmlns:dm="using:Lemmy.Domain.Models"
+             mc:Ignorable="d" d:DesignWidth="420" d:DesignHeight="700"
+             x:Class="Lemmy.Views.AttributionView"
+             x:DataType="vm:AttributionViewModel">
+
+    <ScrollViewer Padding="14,10,14,20">
+        <StackPanel Spacing="16">
+
+            <StackPanel Spacing="6">
+                <TextBlock Classes="title" Text="LemmySeeIt" />
+                <SelectableTextBlock Classes="licence" TextWrapping="Wrap"
+                                     Text="{Binding ApplicationLicence}" />
+            </StackPanel>
+
+            <Border Height="1" Background="{DynamicResource DividerBrush}" />
+
+            <!-- The typeface is under different terms from the package that carries it, and the
+                 OFL asks that this notice ship with the font. -->
+            <Expander Header="Inter typeface">
+                <SelectableTextBlock Classes="licence" TextWrapping="Wrap"
+                                     Text="{Binding FontNotice}" />
+            </Expander>
+
+            <StackPanel Spacing="4">
+                <TextBlock Classes="title" Text="Third-party packages" />
+                <TextBlock Classes="meta" Text="{Binding PackageCount}" />
+                <TextBlock Classes="meta"
+                           TextWrapping="Wrap"
+                           Text="Generated from what this build ships, so it matches the binary rather than a list kept by hand." />
+            </StackPanel>
+
+            <ItemsControl ItemsSource="{Binding Packages}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="dm:PackageAttribution">
+                        <Border Classes="chip" Margin="0,0,0,6" Padding="10,8">
+                            <StackPanel Spacing="2">
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <TextBlock Text="{Binding Id}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                                    <TextBlock Classes="meta" Text="{Binding Version}" />
+                                </StackPanel>
+
+                                <TextBlock Classes="meta"
+                                           IsVisible="{Binding !HasUndeclaredLicence}"
+                                           Text="{Binding Licence}" />
+                                <TextBlock Classes="meta"
+                                           IsVisible="{Binding HasUndeclaredLicence}"
+                                           Text="Licence not declared by the package — see its project page." />
+
+                                <TextBlock Classes="meta"
+                                           TextWrapping="Wrap"
+                                           IsVisible="{Binding Copyright.Length}"
+                                           Text="{Binding Copyright}" />
+
+                                <Button Classes="link"
+                                        HorizontalAlignment="Left"
+                                        IsVisible="{Binding ProjectLink.IsValid}"
+                                        Content="Project page"
+                                        Command="{Binding $parent[ItemsControl].((vm:AttributionViewModel)DataContext).OpenProjectCommand}"
+                                        CommandParameter="{Binding}" />
+                            </StackPanel>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <Border Height="1" Background="{DynamicResource DividerBrush}" />
+
+            <StackPanel Spacing="6">
+                <TextBlock Classes="title" Text="Licence texts" />
+                <ItemsControl ItemsSource="{Binding LicenceTexts}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:LicenceText">
+                            <Expander Header="{Binding Identifier}" Margin="0,0,0,6">
+                                <SelectableTextBlock Classes="licence" TextWrapping="Wrap"
+                                                     Text="{Binding Body}" />
+                            </Expander>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>
