@@ -1,0 +1,100 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:Lemmy.ViewModels"
+             mc:Ignorable="d" d:DesignWidth="420" d:DesignHeight="760"
+             x:Class="Lemmy.Views.ImageViewerView"
+             x:DataType="vm:ImageViewerViewModel"
+             Background="Black"
+             Focusable="True"
+             ClipToBounds="True">
+
+    <Panel>
+        <!-- The image itself. Everything about how it is positioned lives in the code-behind,
+             because the gestures that move it do too. -->
+        <Panel Name="Surface" Background="Transparent">
+            <Image Name="Picture"
+                   Source="{Binding Image}"
+                   Stretch="Uniform"
+                   RenderTransformOrigin="50%,50%" />
+        </Panel>
+
+        <ProgressBar IsIndeterminate="True"
+                     Width="140"
+                     HorizontalAlignment="Center"
+                     VerticalAlignment="Center"
+                     IsVisible="{Binding IsLoading}" />
+
+        <StackPanel VerticalAlignment="Center"
+                    HorizontalAlignment="Center"
+                    Spacing="10"
+                    IsVisible="{Binding HasFailed}">
+            <TextBlock Classes="body"
+                       Foreground="White"
+                       TextAlignment="Center"
+                       Text="That image could not be loaded." />
+            <Button Content="Close" HorizontalAlignment="Center" Command="{Binding CloseCommand}" />
+        </StackPanel>
+
+        <!-- Step controls. A swipe does the same thing on a phone; these exist so the gallery is
+             discoverable at all, and so a mouse and a keyboard have something to aim at. -->
+        <Button Classes="link stepper"
+                HorizontalAlignment="Left"
+                VerticalAlignment="Center"
+                IsVisible="{Binding CanShowPrevious}"
+                Command="{Binding ShowPreviousCommand}"
+                ToolTip.Tip="Previous image"
+                Content="&#x2039;" />
+
+        <Button Classes="link stepper"
+                HorizontalAlignment="Right"
+                VerticalAlignment="Center"
+                IsVisible="{Binding CanShowNext}"
+                Command="{Binding ShowNextCommand}"
+                ToolTip.Tip="Next image"
+                Content="&#x203A;" />
+
+        <!-- Caption and close, over the picture. -->
+        <Border VerticalAlignment="Top"
+                Background="#99000000"
+                Padding="12,10">
+            <Grid ColumnDefinitions="*,Auto">
+                <StackPanel Grid.Column="0" Spacing="2">
+                    <TextBlock Classes="title"
+                               Foreground="White"
+                               MaxLines="2"
+                               TextTrimming="CharacterEllipsis"
+                               Text="{Binding Title}" />
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <TextBlock Classes="meta"
+                                   Foreground="#CCFFFFFF"
+                                   Text="{Binding CommunityLabel}" />
+                        <TextBlock Classes="meta"
+                                   Foreground="#99FFFFFF"
+                                   Text="{Binding PositionLabel}" />
+                        <TextBlock Classes="meta"
+                                   Foreground="#99FFFFFF"
+                                   IsVisible="{Binding IsShowingReducedQuality}"
+                                   Text="preview quality" />
+                        <!-- The page is fetching more posts to carry on into. -->
+                        <ProgressBar IsIndeterminate="True"
+                                     Width="48"
+                                     Height="2"
+                                     VerticalAlignment="Center"
+                                     IsVisible="{Binding IsLoadingMore}" />
+                    </StackPanel>
+                </StackPanel>
+                <Button Grid.Column="1"
+                        Classes="link"
+                        Padding="10,4"
+                        FontSize="18"
+                        Foreground="White"
+                        VerticalAlignment="Top"
+                        ToolTip.Tip="Close"
+                        Content="&#x2715;"
+                        Command="{Binding CloseCommand}" />
+            </Grid>
+        </Border>
+    </Panel>
+</UserControl>

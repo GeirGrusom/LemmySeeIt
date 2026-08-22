@@ -1,0 +1,61 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:Lemmy.ViewModels"
+             xmlns:views="using:Lemmy.Views"
+             xmlns:md="using:Lemmy.Views.Markdown"
+             mc:Ignorable="d" d:DesignWidth="420"
+             x:Class="Lemmy.Views.CommentView"
+             x:DataType="vm:CommentViewModel">
+
+    <!-- A comment draws itself, then its replies through this same control: the nesting in the
+         markup mirrors the nesting in the thread. -->
+    <StackPanel>
+
+        <Border BorderBrush="{DynamicResource ThreadLineBrush}"
+                BorderThickness="2,0,0,0"
+                Padding="10,6,0,6">
+            <StackPanel Spacing="4">
+
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                    <Button Classes="link"
+                            FontSize="12"
+                            Width="18"
+                            Command="{Binding ToggleCollapsedCommand}"
+                            Content="{Binding ToggleLabel}"
+                            IsVisible="{Binding HasReplies}" />
+                    <TextBlock Classes="meta" Foreground="{DynamicResource AccentText}" Text="{Binding AuthorLabel}" />
+                    <Border Classes="chip" IsVisible="{Binding HasAuthorBadge}">
+                        <TextBlock Classes="badge" Text="{Binding AuthorBadgeLabel}" />
+                    </Border>
+                    <TextBlock Classes="meta" Text="&#x25B2;" />
+                    <TextBlock Classes="meta" Text="{Binding ScoreLabel}" />
+                    <TextBlock Classes="meta" Text="·" />
+                    <TextBlock Classes="meta" Text="{Binding AgeLabel}" />
+                </StackPanel>
+
+                <md:MarkdownView IsVisible="{Binding !IsCollapsed}"
+                                 Blocks="{Binding Content}"
+                                 LinkCommand="{Binding LinkCommand}" />
+
+                <TextBlock Classes="meta"
+                           Foreground="{DynamicResource SecondaryText}"
+                           IsVisible="{Binding HasUnloadedReplies}"
+                           Text="{Binding UnloadedRepliesLabel}" />
+            </StackPanel>
+        </Border>
+
+        <!-- Indentation lives here rather than in the view model: each level nests inside the one
+             above it, so a fixed margin per level is all the nesting depth this needs to know. -->
+        <ItemsControl Margin="12,0,0,0"
+                      ItemsSource="{Binding Replies}"
+                      IsVisible="{Binding !IsCollapsed}">
+            <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:CommentViewModel">
+                    <views:CommentView />
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+    </StackPanel>
+</UserControl>

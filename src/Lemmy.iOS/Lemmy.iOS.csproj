@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0-ios</TargetFramework>
+    <SupportedOSPlatformVersion>14.0</SupportedOSPlatformVersion>
+    <RootNamespace>Lemmy.iOS</RootNamespace>
+    <AssemblyName>LemmySeeIt</AssemblyName>
+    <ApplicationId>com.lemmyseeit.app</ApplicationId>
+    <ApplicationVersion>1</ApplicationVersion>
+    <ApplicationDisplayVersion>0.1.0</ApplicationDisplayVersion>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <!-- iOS forbids just-in-time compilation, so a device build is ahead-of-time either way.
+         Native AOT produces the smaller, faster binary and is what the shared code targets. -->
+    <PublishAot>true</PublishAot>
+    <TrimMode>full</TrimMode>
+    <MtouchLink>Full</MtouchLink>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia.iOS" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../Lemmy/Lemmy.csproj" />
+  </ItemGroup>
+
+</Project>

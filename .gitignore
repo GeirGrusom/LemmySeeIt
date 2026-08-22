@@ -1,0 +1,101 @@
+# ---------------------------------------------------------------------------
+# Build output
+# ---------------------------------------------------------------------------
+bin/
+obj/
+artifacts/
+publish/
+*.binlog
+msbuild.log
+msbuild.err
+msbuild.wrn
+
+# ---------------------------------------------------------------------------
+# Signing material and machine-local configuration
+#
+# Nothing here is currently in the tree; these are guards. An Android release
+# keystore committed once stays in history forever, so it is cheaper to ignore
+# the shapes up front than to rewrite history later.
+# ---------------------------------------------------------------------------
+*.keystore
+*.jks
+*.p12
+*.pfx
+*.snk
+*.cer
+*.certSigningRequest
+*.mobileprovision
+*.provisionprofile
+local.properties
+.env
+.env.*
+secrets.json
+
+# Machine-local build paths (Android SDK / JDK locations)
+Directory.Build.local.props
+
+# ---------------------------------------------------------------------------
+# NuGet
+# ---------------------------------------------------------------------------
+*.nupkg
+*.snupkg
+.nuget/
+project.lock.json
+project.fragment.lock.json
+
+# ---------------------------------------------------------------------------
+# Test and coverage output
+# ---------------------------------------------------------------------------
+[Tt]est[Rr]esult*/
+*.trx
+*.coverage
+*.coverlet.json
+coverage*.json
+coverage*.xml
+coverage*.info
+BenchmarkDotNet.Artifacts/
+
+# ---------------------------------------------------------------------------
+# Platform head leftovers
+# ---------------------------------------------------------------------------
+*.apk
+*.aab
+*.ipa
+*.dSYM/
+*.gradle/
+xcuserdata/
+
+# ---------------------------------------------------------------------------
+# Editors and IDEs
+# ---------------------------------------------------------------------------
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+*.userprefs
+*.sln.docstates
+*.DotSettings.user
+
+# ---------------------------------------------------------------------------
+# Editor and merge scratch files
+#
+# Stale *.bak / *.orig copies of source files once produced a build that
+# silently disagreed with the tree, which cost real debugging time.
+# ---------------------------------------------------------------------------
+*.bak
+*.orig
+*.rej
+*~
+*.swp
+*.swo
+
+# ---------------------------------------------------------------------------
+# OS cruft
+# ---------------------------------------------------------------------------
+.DS_Store
+._*
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/

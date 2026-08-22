@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The splash mark: the same eye as the launcher icon, drawn as a vector so Android 12's
+     splash-screen API can animate it in. -->
+<animated-vector xmlns:android="http://schemas.android.com/apk/res/android"
+                 xmlns:aapt="http://schemas.android.com/aapt">
+  <aapt:attr name="android:drawable">
+    <vector android:name="mark"
+            android:width="128dp"
+            android:height="128dp"
+            android:viewportWidth="128"
+            android:viewportHeight="128">
+      <group android:name="eye">
+        <path android:name="outline"
+              android:pathData="M 14,64 Q 64,26 114,64 Q 64,102 14,64 Z"
+              android:strokeColor="#141B2E"
+              android:strokeWidth="7"
+              android:strokeLineJoin="round"
+              android:fillColor="#00000000"
+              android:fillAlpha="0" />
+        <path android:name="iris"
+              android:pathData="M 64,45 A 19,19 0 1 1 63.99,45 Z"
+              android:fillColor="#3AA37F"
+              android:fillAlpha="0" />
+        <path android:name="pupil"
+              android:pathData="M 64,55 A 9,9 0 1 1 63.99,55 Z"
+              android:fillColor="#0B101C"
+              android:fillAlpha="0" />
+      </group>
+    </vector>
+  </aapt:attr>
+
+  <target android:name="outline">
+    <aapt:attr name="android:animation">
+      <objectAnimator android:propertyName="fillAlpha"
+                      android:duration="450"
+                      android:valueFrom="0"
+                      android:valueTo="1"
+                      android:valueType="floatType"
+                      android:interpolator="@android:interpolator/fast_out_slow_in" />
+    </aapt:attr>
+  </target>
+  <target android:name="iris">
+    <aapt:attr name="android:animation">
+      <objectAnimator android:propertyName="fillAlpha"
+                      android:startOffset="200"
+                      android:duration="500"
+                      android:valueFrom="0"
+                      android:valueTo="1"
+                      android:valueType="floatType"
+                      android:interpolator="@android:interpolator/fast_out_slow_in" />
+    </aapt:attr>
+  </target>
+  <target android:name="pupil">
+    <aapt:attr name="android:animation">
+      <objectAnimator android:propertyName="fillAlpha"
+                      android:startOffset="300"
+                      android:duration="500"
+                      android:valueFrom="0"
+                      android:valueTo="1"
+                      android:valueType="floatType"
+                      android:interpolator="@android:interpolator/fast_out_slow_in" />
+    </aapt:attr>
+  </target>
+</animated-vector>

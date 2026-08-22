@@ -1,0 +1,143 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:Lemmy.ViewModels"
+             xmlns:views="using:Lemmy.Views"
+             xmlns:md="using:Lemmy.Views.Markdown"
+             mc:Ignorable="d" d:DesignWidth="420" d:DesignHeight="700"
+             x:Class="Lemmy.Views.PostDetailView"
+             x:DataType="vm:PostDetailViewModel">
+
+    <ScrollViewer Padding="10">
+        <StackPanel Spacing="12" MaxWidth="760" HorizontalAlignment="Stretch">
+
+            <Border Background="{DynamicResource SurfaceBackground}"
+                    BorderBrush="{DynamicResource SurfaceBorder}"
+                    BorderThickness="1"
+                    CornerRadius="10"
+                    Padding="14">
+                <StackPanel Spacing="8">
+
+                    <WrapPanel>
+                        <Button Classes="link" Command="{Binding OpenCommunityCommand}">
+                            <TextBlock Classes="meta"
+                                       Foreground="{DynamicResource AccentText}"
+                                       Text="{Binding CommunityLabel}" />
+                        </Button>
+                        <TextBlock Classes="meta" Text=" · " />
+                        <TextBlock Classes="meta" Text="{Binding AuthorLabel}" />
+                        <TextBlock Classes="meta" Text=" · " />
+                        <TextBlock Classes="meta" Text="{Binding AgeLabel}" />
+                    </WrapPanel>
+
+                    <SelectableTextBlock Classes="title" FontSize="19" Text="{Binding Title}" />
+
+                    <!-- The link is the point of a link post, so it is a control rather than a
+                         label: tapping it hands the URL to the browser. -->
+                    <Button Classes="link"
+                            HorizontalAlignment="Stretch"
+                            HorizontalContentAlignment="Left"
+                            IsVisible="{Binding HasLink}"
+                            Command="{Binding OpenLinkCommand}"
+                            ToolTip.Tip="Open in browser">
+                        <!-- A Grid, not a horizontal StackPanel: that would hand the URL infinite
+                             width and a long one would run off the side instead of wrapping. -->
+                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="6">
+                            <TextBlock Grid.Column="0"
+                                       Classes="meta"
+                                       VerticalAlignment="Top"
+                                       Foreground="{DynamicResource AccentText}"
+                                       Text="&#x2197;" />
+                            <TextBlock Grid.Column="1"
+                                       Classes="meta"
+                                       Foreground="{DynamicResource AccentText}"
+                                       TextWrapping="Wrap"
+                                       Text="{Binding LinkLabel}" />
+                        </Grid>
+                    </Button>
+
+                    <Panel IsVisible="{Binding HasImage}">
+                        <Border CornerRadius="8" ClipToBounds="True" Background="{DynamicResource AppBackground}">
+                            <Image Source="{Binding Image}" Stretch="Uniform" MaxHeight="620" />
+                        </Border>
+                        <Button Classes="link"
+                                IsVisible="{Binding IsImageHidden}"
+                                Command="{Binding RevealImageCommand}"
+                                HorizontalAlignment="Stretch"
+                                VerticalAlignment="Stretch">
+                            <Border Background="{DynamicResource ScrimBrush}" CornerRadius="8" MinHeight="180">
+                                <TextBlock Classes="badge"
+                                           Foreground="White"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center"
+                                           Text="SHOW NSFW IMAGE" />
+                            </Border>
+                        </Button>
+                    </Panel>
+
+                    <md:MarkdownView IsVisible="{Binding HasBody}"
+                                     Blocks="{Binding Body}"
+                                     LinkCommand="{Binding OpenMarkdownLinkCommand}" />
+
+                    <StackPanel Orientation="Horizontal" Spacing="14">
+                        <StackPanel Orientation="Horizontal" Spacing="4">
+                            <TextBlock Classes="meta" Text="&#x25B2;" />
+                            <TextBlock Classes="meta" Text="{Binding ScoreLabel}" />
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Spacing="4">
+                            <TextBlock Classes="meta" Text="&#x1F5E8;" />
+                            <TextBlock Classes="meta" Text="{Binding CommentsLabel}" />
+                        </StackPanel>
+                        <TextBlock Classes="meta" IsVisible="{Binding IsLocked}" Text="&#x1F512; comments locked" />
+
+                        <Button Classes="link"
+                                IsVisible="{Binding HasWebAddress}"
+                                Command="{Binding OpenOnTheWebCommand}"
+                                ToolTip.Tip="Open this post on its instance">
+                            <TextBlock Classes="meta"
+                                       Foreground="{DynamicResource AccentText}"
+                                       Text="Open on the web" />
+                        </Button>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <TextBlock Classes="meta" VerticalAlignment="Center" Text="Comments" />
+                <ComboBox ItemsSource="{x:Static vm:DisplayOptions.CommentSorts}"
+                          SelectedValue="{Binding SelectedSort}"
+                          SelectedValueBinding="{Binding Value}"
+                          MinWidth="140">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate x:DataType="vm:CommentSortOption">
+                            <TextBlock Text="{Binding Label}" />
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+            </StackPanel>
+
+            <ProgressBar IsIndeterminate="True" Width="140" HorizontalAlignment="Center" IsVisible="{Binding IsBusy}" />
+
+            <TextBlock Classes="body"
+                       Foreground="{DynamicResource NegativeText}"
+                       TextWrapping="Wrap"
+                       IsVisible="{Binding HasError}"
+                       Text="{Binding ErrorMessage}" />
+
+            <TextBlock Classes="meta"
+                       Margin="0,10"
+                       HorizontalAlignment="Center"
+                       IsVisible="{Binding HasNoComments}"
+                       Text="No comments yet." />
+
+            <ItemsControl ItemsSource="{Binding Comments}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:CommentViewModel">
+                        <views:CommentView Margin="0,0,0,6" />
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

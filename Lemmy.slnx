@@ -1,0 +1,16 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Lemmy/Lemmy.csproj" />
+    <Project Path="src/Lemmy.Windows/Lemmy.Windows.csproj" />
+    <Project Path="src/Lemmy.Linux/Lemmy.Linux.csproj" />
+    <Project Path="src/Lemmy.Android/Lemmy.Android.csproj">
+      <Deploy />
+    </Project>
+    <Project Path="src/Lemmy.iOS/Lemmy.iOS.csproj">
+      <Deploy />
+    </Project>
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Lemmy.Tests/Lemmy.Tests.csproj" />
+  </Folder>
+</Solution>

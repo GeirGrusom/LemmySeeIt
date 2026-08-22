@@ -1,0 +1,232 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:Lemmy.ViewModels"
+             xmlns:views="using:Lemmy.Views"
+             mc:Ignorable="d" d:DesignWidth="420" d:DesignHeight="760"
+             x:Class="Lemmy.Views.MainView"
+             x:DataType="vm:MainViewModel"
+             Background="{DynamicResource AppBackground}"
+             TopLevel.AutoSafeAreaPadding="True">
+
+    <!-- Avalonia already defaults this to true; it is stated anyway because it is what keeps the
+         header out from under the status bar and the section bar out from under the gesture pill on
+         Android 15+, which forces edge-to-edge drawing on anything targeting SDK 35 or later. -->
+
+    <Panel>
+        <DockPanel LastChildFill="True">
+
+            <!-- Header: back, title, instance switcher. -->
+            <Border DockPanel.Dock="Top"
+                    Background="{DynamicResource ChromeBackground}"
+                    BorderBrush="{DynamicResource DividerBrush}"
+                    BorderThickness="0,0,0,1"
+                    Padding="8,6">
+                <Grid ColumnDefinitions="Auto,*,Auto">
+
+                    <Button Grid.Column="0"
+                            Classes="link"
+                            Padding="8,4"
+                            FontSize="18"
+                            Content="&#x2190;"
+                            ToolTip.Tip="Back"
+                            IsVisible="{Binding CanPop}"
+                            Command="{Binding GoBackCommand}" />
+
+                    <TextBlock Grid.Column="1"
+                               Classes="title"
+                               Margin="8,0"
+                               VerticalAlignment="Center"
+                               TextTrimming="CharacterEllipsis"
+                               TextWrapping="NoWrap"
+                               Text="{Binding PageTitle}" />
+
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4">
+                        <Button Classes="link"
+                                Padding="8,4"
+                                ToolTip.Tip="Read from another instance"
+                                Command="{Binding ToggleInstancePickerCommand}">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <TextBlock Classes="meta" Text="{Binding InstanceLabel}" />
+                                <TextBlock Classes="meta" Text="&#x25BE;" />
+                            </StackPanel>
+                        </Button>
+
+                        <Button Classes="link"
+                                Padding="8,4"
+                                ToolTip.Tip="Sign in or out"
+                                Command="{Binding ToggleAccountCommand}">
+                            <TextBlock Classes="meta"
+                                       Foreground="{DynamicResource AccentText}"
+                                       Text="{Binding AccountLabel}" />
+                        </Button>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- Section bar: at the bottom, where a thumb can reach it. -->
+            <Border DockPanel.Dock="Bottom"
+                    Background="{DynamicResource ChromeBackground}"
+                    BorderBrush="{DynamicResource DividerBrush}"
+                    BorderThickness="0,1,0,0">
+                <ListBox Classes="plain sections"
+                         ItemsSource="{x:Static vm:DisplayOptions.Sections}"
+                         SelectedValue="{Binding SelectedSection}"
+                         SelectedValueBinding="{Binding Value}">
+                    <ListBox.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <UniformGrid Rows="1" />
+                        </ItemsPanelTemplate>
+                    </ListBox.ItemsPanel>
+                    <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="vm:SectionOption">
+                            <TextBlock Text="{Binding Label}"
+                                       Padding="0,12"
+                                       FontSize="13"
+                                       HorizontalAlignment="Center" />
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </Border>
+
+            <ContentControl Content="{Binding CurrentPage}" />
+        </DockPanel>
+
+        <!-- Instance picker, over everything else. -->
+        <Border IsVisible="{Binding IsInstancePickerOpen}"
+                Background="{DynamicResource ScrimBrush}">
+            <Border Background="{DynamicResource SurfaceBackground}"
+                    BorderBrush="{DynamicResource SurfaceBorder}"
+                    BorderThickness="1"
+                    CornerRadius="12"
+                    Padding="18"
+                    Margin="16"
+                    MaxWidth="420"
+                    VerticalAlignment="Center"
+                    HorizontalAlignment="Center">
+                <StackPanel Spacing="10">
+                    <TextBlock Classes="title" Text="Settings" />
+
+                    <TextBlock Classes="meta"
+                               TextWrapping="Wrap"
+                               Text="Lemmy is many servers. Posts, communities and accounts each belong to one of them." />
+                    <TextBox Text="{Binding InstanceInput}" PlaceholderText="lemmy.world">
+                        <TextBox.KeyBindings>
+                            <KeyBinding Gesture="Enter" Command="{Binding ApplyInstanceCommand}" />
+                        </TextBox.KeyBindings>
+                    </TextBox>
+                    <TextBlock Classes="meta"
+                               Foreground="{DynamicResource NegativeText}"
+                               TextWrapping="Wrap"
+                               IsVisible="{Binding InstanceError, Converter={x:Static ObjectConverters.IsNotNull}}"
+                               Text="{Binding InstanceError}" />
+
+                    <Border Height="1" Margin="0,4" Background="{DynamicResource DividerBrush}" />
+
+                    <!-- Applies immediately: it changes what the server is asked for, so the feed
+                         is refetched rather than filtered afterwards. -->
+                    <CheckBox IsChecked="{Binding ShowNsfw}" Content="Show content flagged NSFW" />
+                    <CheckBox IsChecked="{Binding BlurNsfwImages}"
+                              IsEnabled="{Binding ShowNsfw}"
+                              Content="Blur those images until tapped" />
+                    <TextBlock Classes="meta"
+                               TextWrapping="Wrap"
+                               IsVisible="{Binding IsSignedIn}"
+                               Text="These start out matching the settings on your account." />
+
+                    <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+                        <Button Content="Done" Command="{Binding ToggleInstancePickerCommand}" />
+                        <Button Content="Switch instance" Classes="accent" Command="{Binding ApplyInstanceCommand}" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </Border>
+
+        <!-- Who is signed in, and the only way out. -->
+        <Border IsVisible="{Binding IsAccountOpen}" Background="{DynamicResource ScrimBrush}">
+            <Border Background="{DynamicResource SurfaceBackground}"
+                    BorderBrush="{DynamicResource SurfaceBorder}"
+                    BorderThickness="1"
+                    CornerRadius="12"
+                    Padding="18"
+                    Margin="16"
+                    MaxWidth="420"
+                    VerticalAlignment="Center"
+                    HorizontalAlignment="Center">
+                <StackPanel Spacing="10">
+                    <TextBlock Classes="title" Text="{Binding AccountLabel}" />
+                    <TextBlock Classes="meta" Text="{Binding AccountQualifiedName}" />
+                    <TextBlock Classes="meta"
+                               TextWrapping="Wrap"
+                               Text="{Binding SessionNote, StringFormat='Your session is {0}.'}" />
+                    <TextBlock Classes="meta"
+                               TextWrapping="Wrap"
+                               Text="Signing out ends the session on the server too, so you will need your password again." />
+
+                    <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+                        <Button Content="Close" Command="{Binding CloseAccountCommand}" />
+                        <Button Content="Sign out" Command="{Binding ConfirmSignOutCommand}" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </Border>
+
+        <!-- Sign in. -->
+        <Border IsVisible="{Binding IsSignInOpen}" Background="{DynamicResource ScrimBrush}">
+            <Border Background="{DynamicResource SurfaceBackground}"
+                    BorderBrush="{DynamicResource SurfaceBorder}"
+                    BorderThickness="1"
+                    CornerRadius="12"
+                    Padding="18"
+                    Margin="16"
+                    MaxWidth="420"
+                    VerticalAlignment="Center"
+                    HorizontalAlignment="Center">
+                <StackPanel Spacing="10">
+                    <TextBlock Classes="title" Text="Sign in" />
+                    <TextBlock Classes="meta"
+                               TextWrapping="Wrap"
+                               Text="{Binding InstanceLabel, StringFormat='Your account on {0}. Signing in shows your subscribed feed and the votes you have already cast.'}" />
+
+                    <TextBox Text="{Binding SignInName}" PlaceholderText="Account name or email" />
+                    <TextBox Text="{Binding SignInPassword}" PasswordChar="•" PlaceholderText="Password">
+                        <TextBox.KeyBindings>
+                            <KeyBinding Gesture="Enter" Command="{Binding SignInCommand}" />
+                        </TextBox.KeyBindings>
+                    </TextBox>
+                    <TextBox Text="{Binding SignInTotp}" PlaceholderText="Two-factor code, if you use one" />
+
+                    <TextBlock Classes="meta"
+                               Foreground="{DynamicResource NegativeText}"
+                               TextWrapping="Wrap"
+                               IsVisible="{Binding SignInError, Converter={x:Static ObjectConverters.IsNotNull}}"
+                               Text="{Binding SignInError}" />
+
+                    <!-- Says plainly what happens to the session on this device. -->
+                    <TextBlock Classes="meta"
+                               TextWrapping="Wrap"
+                               Text="{Binding SessionNote, StringFormat='Your session is {0}. Your password is never stored.'}" />
+
+                    <ProgressBar IsIndeterminate="True" Height="2" IsVisible="{Binding IsSigningIn}" />
+
+                    <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+                        <Button Content="Cancel" Command="{Binding CancelSignInCommand}" />
+                        <Button Content="Sign in" Classes="accent" Command="{Binding SignInCommand}" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </Border>
+
+        <!-- The picture is the topmost layer: opened from a feed row, dismissed by tap, by the
+             close button, or by the system back gesture. -->
+        <ContentControl Content="{Binding ImageViewer}"
+                        IsVisible="{Binding ImageViewer, Converter={x:Static ObjectConverters.IsNotNull}}">
+            <ContentControl.ContentTemplate>
+                <DataTemplate x:DataType="vm:ImageViewerViewModel">
+                    <views:ImageViewerView />
+                </DataTemplate>
+            </ContentControl.ContentTemplate>
+        </ContentControl>
+    </Panel>
+</UserControl>

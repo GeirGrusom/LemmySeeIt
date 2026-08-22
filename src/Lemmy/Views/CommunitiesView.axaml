@@ -1,0 +1,76 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:Lemmy.ViewModels"
+             mc:Ignorable="d" d:DesignWidth="420" d:DesignHeight="700"
+             x:Class="Lemmy.Views.CommunitiesView"
+             x:DataType="vm:CommunitiesViewModel">
+
+    <DockPanel LastChildFill="True">
+
+        <Border DockPanel.Dock="Top" Padding="10,8">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <ComboBox ItemsSource="{x:Static vm:DisplayOptions.Listings}"
+                          SelectedValue="{Binding SelectedListing}"
+                          SelectedValueBinding="{Binding Value}"
+                          MinWidth="110">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate x:DataType="vm:ListingOption">
+                            <TextBlock Text="{Binding Label}" />
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+                <Button Content="Refresh" Command="{Binding ReloadCommand}" />
+            </StackPanel>
+        </Border>
+
+        <Border DockPanel.Dock="Bottom" Padding="10,6" IsVisible="{Binding IsLoadingMore}">
+            <ProgressBar IsIndeterminate="True" Height="3" />
+        </Border>
+
+        <Panel>
+            <!-- Pull to refresh. Left off for mouse users by default, which is right:
+                 the toolbar button is the desktop affordance. -->
+            <RefreshContainer PullDirection="TopToBottom" RefreshRequested="OnRefreshRequested">
+                <ListBox Classes="plain" Padding="10,0,10,10" ItemsSource="{Binding Communities}">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="vm:CommunityRowViewModel">
+                            <Button Classes="card" Margin="0,0,0,8" Command="{Binding OpenCommand}">
+                                <StackPanel Spacing="4">
+                                    <TextBlock Classes="title" FontSize="15" Text="{Binding Title}" />
+                                    <TextBlock Classes="meta"
+                                               Foreground="{DynamicResource AccentText}"
+                                               Text="{Binding QualifiedName}" />
+                                    <TextBlock Classes="body"
+                                               MaxLines="2"
+                                               TextTrimming="CharacterEllipsis"
+                                               IsVisible="{Binding HasDescription}"
+                                               Foreground="{DynamicResource SecondaryText}"
+                                               Text="{Binding DescriptionPreview}" />
+                                    <TextBlock Classes="meta" Text="{Binding ActivityLabel}" />
+                                </StackPanel>
+                            </Button>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </RefreshContainer>
+
+            <ProgressBar IsIndeterminate="True"
+                         Width="140"
+                         VerticalAlignment="Center"
+                         HorizontalAlignment="Center"
+                         IsVisible="{Binding IsBusy}" />
+
+            <Border Padding="24" VerticalAlignment="Center" IsVisible="{Binding HasError}">
+                <StackPanel Spacing="10" HorizontalAlignment="Center">
+                    <TextBlock Classes="body"
+                               TextAlignment="Center"
+                               Foreground="{DynamicResource NegativeText}"
+                               Text="{Binding ErrorMessage}" />
+                    <Button Content="Try again" HorizontalAlignment="Center" Command="{Binding ReloadCommand}" />
+                </StackPanel>
+            </Border>
+        </Panel>
+    </DockPanel>
+</UserControl>

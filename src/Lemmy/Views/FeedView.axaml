@@ -1,0 +1,92 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:Lemmy.ViewModels"
+             xmlns:views="using:Lemmy.Views"
+             mc:Ignorable="d" d:DesignWidth="420" d:DesignHeight="700"
+             x:Class="Lemmy.Views.FeedView"
+             x:DataType="vm:FeedViewModel">
+
+    <DockPanel LastChildFill="True">
+
+        <!-- Toolbar. -->
+        <Border DockPanel.Dock="Top" Padding="10,8" Background="{DynamicResource AppBackground}">
+            <StackPanel Spacing="6">
+                <TextBlock Classes="meta"
+                           IsVisible="{Binding IsCommunityFeed}"
+                           Text="{Binding SubtitleLabel}" />
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <ComboBox ItemsSource="{x:Static vm:DisplayOptions.PostSorts}"
+                              SelectedValue="{Binding SelectedSort}"
+                              SelectedValueBinding="{Binding Value}"
+                              MinWidth="140">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate x:DataType="vm:SortOption">
+                                <TextBlock Text="{Binding Label}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+
+                    <ComboBox ItemsSource="{Binding ListingOptions}"
+                              SelectedValue="{Binding SelectedListing}"
+                              SelectedValueBinding="{Binding Value}"
+                              IsVisible="{Binding !IsCommunityFeed}"
+                              MinWidth="90">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate x:DataType="vm:ListingOption">
+                                <TextBlock Text="{Binding Label}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+
+                    <Button Content="Refresh" Command="{Binding ReloadCommand}" />
+                </StackPanel>
+            </StackPanel>
+        </Border>
+
+        <!-- Status strip: loading, error, end of feed. -->
+        <Border DockPanel.Dock="Bottom" Padding="10,6" IsVisible="{Binding IsLoadingMore}">
+            <ProgressBar IsIndeterminate="True" Height="3" />
+        </Border>
+
+        <Panel>
+            <!-- Pull to refresh. Left off for mouse users by default, which is right:
+                 the toolbar button is the desktop affordance. -->
+            <RefreshContainer PullDirection="TopToBottom" RefreshRequested="OnRefreshRequested">
+                <ListBox Name="PostList"
+                         Classes="plain"
+                         Padding="10,0,10,10"
+                         ItemsSource="{Binding Posts}"
+                         SelectionMode="Single">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="vm:PostCardViewModel">
+                            <views:PostCardView Margin="0,0,0,10" />
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </RefreshContainer>
+
+            <ProgressBar IsIndeterminate="True"
+                         Width="140"
+                         VerticalAlignment="Center"
+                         HorizontalAlignment="Center"
+                         IsVisible="{Binding IsLoadingFirstPage}" />
+
+            <Border Padding="24"
+                    VerticalAlignment="Center"
+                    IsVisible="{Binding HasError}">
+                <StackPanel Spacing="10" HorizontalAlignment="Center">
+                    <TextBlock Classes="body"
+                               HorizontalAlignment="Center"
+                               TextAlignment="Center"
+                               Foreground="{DynamicResource NegativeText}"
+                               Text="{Binding ErrorMessage}" />
+                    <Button Content="Try again"
+                            HorizontalAlignment="Center"
+                            Command="{Binding ReloadCommand}" />
+                </StackPanel>
+            </Border>
+        </Panel>
+    </DockPanel>
+</UserControl>

@@ -1,0 +1,95 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:Lemmy.ViewModels"
+             xmlns:views="using:Lemmy.Views"
+             mc:Ignorable="d" d:DesignWidth="420" d:DesignHeight="700"
+             x:Class="Lemmy.Views.SearchView"
+             x:DataType="vm:SearchViewModel">
+
+    <DockPanel LastChildFill="True">
+
+        <Border DockPanel.Dock="Top" Padding="10,8">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                <TextBox Grid.Column="0"
+                         Text="{Binding QueryText}"
+                         PlaceholderText="Search posts and communities">
+                    <TextBox.KeyBindings>
+                        <KeyBinding Gesture="Enter" Command="{Binding SearchCommand}" />
+                    </TextBox.KeyBindings>
+                </TextBox>
+                <Button Grid.Column="1"
+                        Classes="accent"
+                        Content="Search"
+                        Command="{Binding SearchCommand}" />
+            </Grid>
+        </Border>
+
+        <Panel>
+            <ScrollViewer Padding="10,0,10,10">
+                <StackPanel Spacing="10">
+
+                    <TextBlock Classes="meta"
+                               Text="Communities"
+                               IsVisible="{Binding HasCommunityResults}" />
+
+                    <ItemsControl ItemsSource="{Binding Communities}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:CommunityRowViewModel">
+                                <Button Classes="card" Margin="0,0,0,8" Command="{Binding OpenCommand}">
+                                    <StackPanel Spacing="2">
+                                        <TextBlock Classes="title" FontSize="15" Text="{Binding Title}" />
+                                        <TextBlock Classes="meta"
+                                                   Foreground="{DynamicResource AccentText}"
+                                                   Text="{Binding QualifiedName}" />
+                                        <TextBlock Classes="meta" Text="{Binding ActivityLabel}" />
+                                    </StackPanel>
+                                </Button>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <TextBlock Classes="meta"
+                               Text="Posts"
+                               IsVisible="{Binding HasPostResults}" />
+
+                    <ItemsControl ItemsSource="{Binding Posts}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:PostCardViewModel">
+                                <views:PostCardView Margin="0,0,0,10" />
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <TextBlock Classes="meta"
+                               Margin="0,24"
+                               HorizontalAlignment="Center"
+                               IsVisible="{Binding FoundNothing}"
+                               Text="Nothing matched that." />
+
+                    <TextBlock Classes="meta"
+                               Margin="0,24"
+                               HorizontalAlignment="Center"
+                               TextAlignment="Center"
+                               TextWrapping="Wrap"
+                               IsVisible="{Binding !HasSearched}"
+                               Text="Search this instance for posts and communities." />
+                </StackPanel>
+            </ScrollViewer>
+
+            <ProgressBar IsIndeterminate="True"
+                         Width="140"
+                         VerticalAlignment="Center"
+                         HorizontalAlignment="Center"
+                         IsVisible="{Binding IsBusy}" />
+
+            <Border Padding="24" VerticalAlignment="Center" IsVisible="{Binding HasError}">
+                <TextBlock Classes="body"
+                           TextAlignment="Center"
+                           Foreground="{DynamicResource NegativeText}"
+                           Text="{Binding ErrorMessage}" />
+            </Border>
+        </Panel>
+    </DockPanel>
+</UserControl>

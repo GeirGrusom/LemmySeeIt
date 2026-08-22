@@ -1,0 +1,33 @@
+<Project>
+
+  <!-- Machine-local overrides, if any: Android SDK and JDK paths differ per developer and must not
+       be committed. Create Directory.Build.local.props from the sample in the README. -->
+  <Import Project="Directory.Build.local.props" Condition="Exists('Directory.Build.local.props')" />
+
+  <PropertyGroup>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <AnalysisLevel>latest</AnalysisLevel>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <AccelerateBuildsInVisualStudio>true</AccelerateBuildsInVisualStudio>
+
+    <Product>LemmySeeIt</Product>
+    <Company>LemmySeeIt</Company>
+    <Version>0.1.0</Version>
+    <NeutralLanguage>en</NeutralLanguage>
+
+    <!-- Every project in this repo must survive trimming + Native AOT analysis. -->
+    <IsAotCompatible Condition="'$(IsTestProject)' != 'true'">true</IsAotCompatible>
+    <EnableTrimAnalyzer Condition="'$(IsTestProject)' != 'true'">true</EnableTrimAnalyzer>
+    <EnableAotAnalyzer Condition="'$(IsTestProject)' != 'true'">true</EnableAotAnalyzer>
+    <EnableSingleFileAnalyzer Condition="'$(IsTestProject)' != 'true'">true</EnableSingleFileAnalyzer>
+
+    <!-- Reflection-free serialization only: fail the build if a reflection fallback is used. -->
+    <JsonSerializerIsReflectionEnabledByDefault>false</JsonSerializerIsReflectionEnabledByDefault>
+
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+  </PropertyGroup>
+</Project>

@@ -1,0 +1,34 @@
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+indent_style = space
+indent_size = 4
+trim_trailing_whitespace = true
+
+[*.{csproj,props,targets,slnx,axaml,xaml,xml,plist}]
+indent_size = 2
+
+[*.{json,yml,yaml}]
+indent_size = 2
+
+[*.cs]
+csharp_style_namespace_declarations = file_scoped:warning
+csharp_style_var_for_built_in_types = false:none
+csharp_style_expression_bodied_methods = when_on_single_line:silent
+dotnet_style_readonly_field = true:warning
+dotnet_style_require_accessibility_modifiers = for_non_interface_members:warning
+dotnet_sort_system_directives_first = true
+csharp_using_directive_placement = outside_namespace:warning
+
+# Prefer immutable / struct-friendly patterns.
+dotnet_diagnostic.CA1815.severity = warning   # override Equals on value types
+dotnet_diagnostic.CA1067.severity = warning   # override Equals when implementing IEquatable
+dotnet_diagnostic.CA2225.severity = none      # operator overloads have named alternates
+dotnet_diagnostic.CA1054.severity = none      # URI parameters should not be strings
+dotnet_diagnostic.CA1056.severity = none
+
+# XAML-bound view models are instantiated by the framework.
+dotnet_diagnostic.CA1812.severity = none

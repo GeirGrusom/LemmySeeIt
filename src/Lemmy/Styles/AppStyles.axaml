@@ -1,0 +1,161 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:md="using:Lemmy.Views.Markdown">
+
+    <!-- A card is a Button so that opening a post works from the keyboard and from a screen
+         reader as well as from a tap; these styles take the button chrome back off again. -->
+    <Style Selector="Button.card">
+        <Setter Property="Background" Value="{DynamicResource SurfaceBackground}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource SurfaceBorder}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="10" />
+        <Setter Property="Padding" Value="12" />
+        <Setter Property="HorizontalAlignment" Value="Stretch" />
+        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+        <Setter Property="VerticalContentAlignment" Value="Top" />
+        <Setter Property="Cursor" Value="Hand" />
+    </Style>
+
+    <Style Selector="Button.card:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource SurfaceBackground}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource AccentText}" />
+    </Style>
+
+    <Style Selector="Button.card:pressed /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource SurfaceBackground}" />
+    </Style>
+
+    <Style Selector="Button.link">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="Foreground" Value="{DynamicResource AccentText}" />
+        <Setter Property="Cursor" Value="Hand" />
+    </Style>
+
+    <Style Selector="Button.link:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="TextBlock.TextDecorations" Value="Underline" />
+    </Style>
+
+    <Style Selector="Button.nav">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="CornerRadius" Value="8" />
+        <Setter Property="Padding" Value="14,10" />
+        <Setter Property="Foreground" Value="{DynamicResource SecondaryText}" />
+        <Setter Property="HorizontalAlignment" Value="Stretch" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+    </Style>
+
+    <Style Selector="Button.nav.selected">
+        <Setter Property="Foreground" Value="{DynamicResource AccentText}" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+
+    <!-- ":is(TextBlock)" rather than "TextBlock": Avalonia's type selector matches the exact
+         type, and post bodies and comments are SelectableTextBlocks. -->
+    <Style Selector=":is(TextBlock).title">
+        <Setter Property="Foreground" Value="{DynamicResource PrimaryText}" />
+        <Setter Property="FontSize" Value="16" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="TextWrapping" Value="Wrap" />
+        <Setter Property="LineHeight" Value="22" />
+    </Style>
+
+    <Style Selector=":is(TextBlock).meta">
+        <Setter Property="Foreground" Value="{DynamicResource SecondaryText}" />
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+
+    <Style Selector=":is(TextBlock).body">
+        <Setter Property="Foreground" Value="{DynamicResource PrimaryText}" />
+        <Setter Property="FontSize" Value="14" />
+        <Setter Property="TextWrapping" Value="Wrap" />
+        <Setter Property="LineHeight" Value="21" />
+    </Style>
+
+    <Style Selector=":is(TextBlock).badge">
+        <Setter Property="FontSize" Value="10" />
+        <Setter Property="FontWeight" Value="Bold" />
+        <Setter Property="Foreground" Value="{DynamicResource AccentText}" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+
+    <Style Selector="Border.chip">
+        <Setter Property="Background" Value="{DynamicResource AppBackground}" />
+        <Setter Property="CornerRadius" Value="6" />
+        <Setter Property="Padding" Value="6,2" />
+    </Style>
+
+    <!-- Feed rows manage their own spacing and chrome; the list itself should add none. -->
+    <Style Selector="ListBox.plain">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Padding" Value="0" />
+    </Style>
+
+    <Style Selector="ListBox.plain ListBoxItem">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="Margin" Value="0" />
+        <Setter Property="MinHeight" Value="0" />
+    </Style>
+
+    <Style Selector="ListBox.plain ListBoxItem:selected /template/ ContentPresenter">
+        <Setter Property="Background" Value="Transparent" />
+    </Style>
+
+    <Style Selector="ListBox.plain ListBoxItem:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="Transparent" />
+    </Style>
+
+    <!-- The section bar reads as tabs, not as a list. -->
+    <Style Selector="ListBox.sections ListBoxItem">
+        <Setter Property="Foreground" Value="{DynamicResource SecondaryText}" />
+        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    </Style>
+
+    <Style Selector="ListBox.sections ListBoxItem:selected">
+        <Setter Property="Foreground" Value="{DynamicResource AccentText}" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+
+    <!-- The image viewer's previous/next controls. -->
+    <!-- Deliberately understated: on a phone the swipe is the gesture and these are only a hint
+         that there is anywhere to swipe to, so they must not compete with the artwork. -->
+    <Style Selector="Button.stepper">
+        <Setter Property="Foreground" Value="#D9FFFFFF" />
+        <Setter Property="FontSize" Value="26" />
+        <Setter Property="Padding" Value="8,16" />
+        <Setter Property="Margin" Value="6,0" />
+        <Setter Property="Background" Value="#40000000" />
+        <Setter Property="CornerRadius" Value="20" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+    </Style>
+
+    <Style Selector="Button.stepper:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="#8C000000" />
+    </Style>
+
+    <!-- Rendered Markdown builds its text blocks in code, so the body look is applied by type
+         rather than by class. -->
+    <!-- The renderer builds its controls in code, so its palette comes from here as dynamic
+         resources rather than being looked up imperatively — which is what makes it follow the
+         system theme when that changes underneath a post already on screen. -->
+    <Style Selector="md|MarkdownView">
+        <Setter Property="LinkBrush" Value="{DynamicResource AccentText}" />
+        <Setter Property="CodeBackground" Value="{DynamicResource AppBackground}" />
+        <Setter Property="QuoteBrush" Value="{DynamicResource ThreadLineBrush}" />
+        <Setter Property="RuleBrush" Value="{DynamicResource DividerBrush}" />
+    </Style>
+
+    <Style Selector="md|MarkdownView :is(TextBlock)">
+        <Setter Property="Foreground" Value="{DynamicResource PrimaryText}" />
+        <Setter Property="FontSize" Value="14" />
+        <Setter Property="LineHeight" Value="21" />
+    </Style>
+
+</Styles>

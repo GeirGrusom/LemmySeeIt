@@ -1,0 +1,17 @@
+Android resources
+=================
+
+Files under Resources/ are compiled by the Android build into the R class, so they can be referred
+to from code and from the manifest by name rather than by path.
+
+  drawable/Icon.png            the launcher icon, linked in from the shared project's assets
+  drawable/splash_screen.xml   the pre-Android-12 splash, drawn as a layered colour plus icon
+  drawable-v31/*_anim.xml      the Android 12+ animated splash mark, light variant
+  drawable-night-v31/*_anim.xml  the same mark for dark mode
+  values/colors.xml            splash colours, light
+  values-night/colors.xml      splash colours, dark
+  values/styles.xml            the activity theme
+  values-v31/styles.xml        the Android 12+ theme, which drives the splash-screen API
+
+Resource file names must be lower case and may contain only letters, digits and underscores; the
+build fails on anything else, because the generated R class member takes the same name.

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" android:installLocation="auto">
+  <!-- Reading Lemmy needs the network and nothing else. -->
+  <uses-permission android:name="android.permission.INTERNET" />
+  <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+  <!-- enableOnBackInvokedCallback is not optional here. Targeting SDK 35+ means Android drives back
+       through the predictive-back callback and no longer calls the legacy Activity.onBackPressed;
+       without this flag AndroidX never registers for the new path either, so the back gesture
+       reaches nothing and simply closes the app. -->
+  <application android:label="LemmySeeIt"
+               android:icon="@drawable/Icon"
+               android:supportsRtl="true"
+               android:allowBackup="true"
+               android:enableOnBackInvokedCallback="true" />
+</manifest>

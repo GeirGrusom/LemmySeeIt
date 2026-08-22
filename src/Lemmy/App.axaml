@@ -1,0 +1,55 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="using:Lemmy"
+             x:Class="Lemmy.App"
+             RequestedThemeVariant="Default">
+
+    <!-- "Default" follows the operating system; the palette below answers for both variants. -->
+
+    <Application.DataTemplates>
+        <local:ViewLocator />
+    </Application.DataTemplates>
+
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.ThemeDictionaries>
+
+                <ResourceDictionary x:Key="Light">
+                    <SolidColorBrush x:Key="AppBackground" Color="#F4F5F7" />
+                    <SolidColorBrush x:Key="SurfaceBackground" Color="#FFFFFF" />
+                    <SolidColorBrush x:Key="SurfaceBorder" Color="#E1E4E8" />
+                    <SolidColorBrush x:Key="ChromeBackground" Color="#FFFFFF" />
+                    <SolidColorBrush x:Key="PrimaryText" Color="#101418" />
+                    <SolidColorBrush x:Key="SecondaryText" Color="#5B6472" />
+                    <SolidColorBrush x:Key="AccentText" Color="#1666C6" />
+                    <SolidColorBrush x:Key="PositiveText" Color="#1A7F45" />
+                    <SolidColorBrush x:Key="NegativeText" Color="#B4232B" />
+                    <SolidColorBrush x:Key="DividerBrush" Color="#E1E4E8" />
+                    <SolidColorBrush x:Key="ThreadLineBrush" Color="#C9CFD8" />
+                    <SolidColorBrush x:Key="ScrimBrush" Color="#66000000" />
+                </ResourceDictionary>
+
+                <ResourceDictionary x:Key="Dark">
+                    <SolidColorBrush x:Key="AppBackground" Color="#0F1319" />
+                    <SolidColorBrush x:Key="SurfaceBackground" Color="#171C24" />
+                    <SolidColorBrush x:Key="SurfaceBorder" Color="#252C36" />
+                    <SolidColorBrush x:Key="ChromeBackground" Color="#141A22" />
+                    <SolidColorBrush x:Key="PrimaryText" Color="#E7EBF0" />
+                    <SolidColorBrush x:Key="SecondaryText" Color="#98A2B0" />
+                    <SolidColorBrush x:Key="AccentText" Color="#6FB2FF" />
+                    <SolidColorBrush x:Key="PositiveText" Color="#5FD08A" />
+                    <SolidColorBrush x:Key="NegativeText" Color="#FF7A82" />
+                    <SolidColorBrush x:Key="DividerBrush" Color="#232A34" />
+                    <SolidColorBrush x:Key="ThreadLineBrush" Color="#333C48" />
+                    <SolidColorBrush x:Key="ScrimBrush" Color="#99000000" />
+                </ResourceDictionary>
+
+            </ResourceDictionary.ThemeDictionaries>
+        </ResourceDictionary>
+    </Application.Resources>
+
+    <Application.Styles>
+        <FluentTheme />
+        <StyleInclude Source="avares://Lemmy/Styles/AppStyles.axaml" />
+    </Application.Styles>
+</Application>

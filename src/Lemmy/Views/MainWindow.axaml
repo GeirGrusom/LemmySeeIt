@@ -1,0 +1,17 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:vm="using:Lemmy.ViewModels"
+        xmlns:views="using:Lemmy.Views"
+        mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="720"
+        x:Class="Lemmy.Views.MainWindow"
+        x:DataType="vm:MainViewModel"
+        Icon="/Assets/Icon.ico"
+        Title="LemmySeeIt"
+        Width="1000" Height="720"
+        MinWidth="360" MinHeight="480"
+        Background="{DynamicResource AppBackground}">
+
+    <views:MainView />
+</Window>

@@ -1,0 +1,37 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>Lemmy</RootNamespace>
+    <AssemblyName>Lemmy</AssemblyName>
+    <!-- Shared code must not assume a desktop window; all views are usable single-view. -->
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <AvaloniaResource Include="Assets\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia" />
+    <PackageReference Include="Avalonia.Themes.Fluent" />
+    <PackageReference Include="Avalonia.Fonts.Inter" />
+    <PackageReference Include="CommunityToolkit.Mvvm" />
+    <PackageReference Include="Markdig" />
+    <PackageReference Include="SkiaSharp" />
+    <PackageReference Include="System.Security.Cryptography.ProtectedData" />
+    <!-- Referenced unconditionally on purpose. The template conditions IncludeAssets on
+         $(Configuration), but restore is configuration-agnostic and bakes the result into
+         project.assets.json, so whichever configuration restored last decides what the other one
+         sees — alternating Debug and Release builds then fails to compile. The developer tools are
+         only called under #if DEBUG, so a Release build has no reference to them and the trimmer
+         drops the assembly. It has to flow to consumers rather than being PrivateAssets="All",
+         because a Debug build of this library really does call into it at run time. -->
+    <PackageReference Include="AvaloniaUI.DiagnosticsSupport" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Lemmy.Tests" />
+  </ItemGroup>
+
+</Project>
