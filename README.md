@@ -142,8 +142,9 @@ a **Reply**. Your own comments also offer **Edit** and **Delete**; a deleted com
 placeholder in the thread — so the replies under it still hang off something — and you can
 **Restore** it afterwards. Comments are written as Markdown, the same Markdown the app renders.
 
-**Communities and search.** Communities lists the directory for the current server, and Search
-covers both posts and communities on it.
+**Communities and search.** Signed in, Communities opens on the ones you follow; the picker also
+offers All and Local, and signed out it opens on Local. Finding communities you do not already
+follow is what Search is for — it covers both posts and communities on the current server.
 
 **Signing in** is optional — everything above works without it. An account adds the **Subscribed**
 listing to the feed, shows the votes you have already cast, and is what turns the vote arrows on.

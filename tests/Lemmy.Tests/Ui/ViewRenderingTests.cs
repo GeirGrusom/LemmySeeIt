@@ -749,4 +749,157 @@ internal sealed class ViewRenderingTests
             Assert.That(page.Comments[0].Node.Comment.Id, Is.EqualTo(new CommentId(500)));
         });
     }
+
+    [AvaloniaTest]
+    public async Task TheCommunityDirectoryOffersSubscribedOnceSignedIn()
+    {
+        var services = new TestServices();
+        services.Api.IsAuthenticated.Returns(true);
+        services.Api.GetCommunitiesAsync(Arg.Any<CommunityQuery>(), Arg.Any<CancellationToken>())
+            .Returns(ImmutableArray.Create(Sample.CommunitySummary()));
+
+        using var directory = new CommunitiesViewModel(
+            services.Services, new RecordingNavigator(), services.Api, AppSettings.Default);
+        await directory.LoadAsync();
+
+        Assert.That(
+            directory.ListingOptions.Select(option => option.Value),
+            Does.Contain(ListingType.Subscribed).And.Contain(ListingType.All).And.Contain(ListingType.Local));
+    }
+
+    [AvaloniaTest]
+    public async Task TheCommunityDirectoryHasNoSubscribedListingWhenSignedOut()
+    {
+        var services = new TestServices();
+        services.Api.IsAuthenticated.Returns(false);
+        services.Api.GetCommunitiesAsync(Arg.Any<CommunityQuery>(), Arg.Any<CancellationToken>())
+            .Returns(ImmutableArray.Create(Sample.CommunitySummary()));
+
+        using var directory = new CommunitiesViewModel(
+            services.Services, new RecordingNavigator(), services.Api, AppSettings.Default);
+        await directory.LoadAsync();
+
+        Assert.That(
+            directory.ListingOptions.Select(option => option.Value),
+            Does.Not.Contain(ListingType.Subscribed));
+    }
+
+    [AvaloniaTest]
+    public async Task ChoosingSubscribedAsksTheServerForSubscribedCommunities()
+    {
+        var services = new TestServices();
+        services.Api.IsAuthenticated.Returns(true);
+        services.Api.GetCommunitiesAsync(Arg.Any<CommunityQuery>(), Arg.Any<CancellationToken>())
+            .Returns(ImmutableArray.Create(Sample.CommunitySummary()));
+
+        using var directory = new CommunitiesViewModel(
+            services.Services, new RecordingNavigator(), services.Api, AppSettings.Default);
+        await directory.LoadAsync();
+
+        directory.SelectedListing = ListingType.Subscribed;
+        await Task.Yield();
+
+        await services.Api.Received().GetCommunitiesAsync(
+            Arg.Is<CommunityQuery>(query => query.Listing == ListingType.Subscribed),
+            Arg.Any<CancellationToken>());
+    }
+
+    [AvaloniaTest]
+    public async Task SignedInTheDirectoryOpensOnTheReadersOwnCommunities()
+    {
+        var services = new TestServices();
+        services.Api.IsAuthenticated.Returns(true);
+        services.Api.GetCommunitiesAsync(Arg.Any<CommunityQuery>(), Arg.Any<CancellationToken>())
+            .Returns(ImmutableArray.Create(Sample.CommunitySummary()));
+
+        using var directory = new CommunitiesViewModel(
+            services.Services, new RecordingNavigator(), services.Api, AppSettings.Default);
+        await directory.LoadAsync();
+
+        Assert.That(directory.SelectedListing, Is.EqualTo(ListingType.Subscribed));
+        await services.Api.Received().GetCommunitiesAsync(
+            Arg.Is<CommunityQuery>(query => query.Listing == ListingType.Subscribed),
+            Arg.Any<CancellationToken>());
+    }
+
+    [AvaloniaTest]
+    public async Task SignedOutTheDirectoryOpensOnTheInstancesOwnCommunities()
+    {
+        var services = new TestServices();
+        services.Api.IsAuthenticated.Returns(false);
+        services.Api.GetCommunitiesAsync(Arg.Any<CommunityQuery>(), Arg.Any<CancellationToken>())
+            .Returns(ImmutableArray.Create(Sample.CommunitySummary()));
+
+        using var directory = new CommunitiesViewModel(
+            services.Services, new RecordingNavigator(), services.Api, AppSettings.Default);
+        await directory.LoadAsync();
+
+        Assert.That(directory.SelectedListing, Is.EqualTo(ListingType.Local));
+    }
+
+    /// <summary>
+    /// The cost of opening on Subscribed: an account that follows nothing lands on an empty list,
+    /// and a blank tab with no words on it reads as a broken one.
+    /// </summary>
+    [AvaloniaTest]
+    public async Task AnAccountFollowingNothingIsToldSoRatherThanShownABlankTab()
+    {
+        var services = new TestServices();
+        services.Api.IsAuthenticated.Returns(true);
+        services.Api.GetCommunitiesAsync(Arg.Any<CommunityQuery>(), Arg.Any<CancellationToken>())
+            .Returns(ImmutableArray<CommunitySummary>.Empty);
+
+        using var directory = new CommunitiesViewModel(
+            services.Services, new RecordingNavigator(), services.Api, AppSettings.Default);
+        await directory.LoadAsync();
+
+        Window window = Show(new CommunitiesView(), directory);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(directory.HasNoCommunities, Is.True);
+            Assert.That(
+                VisibleText(window).Any(text => text.Contains("do not follow any communities", StringComparison.Ordinal)),
+                Is.True);
+        });
+    }
+
+    [AvaloniaTest]
+    public async Task AnEmptyLocalListingSaysSomethingDifferent()
+    {
+        var services = new TestServices();
+        services.Api.IsAuthenticated.Returns(false);
+        services.Api.GetCommunitiesAsync(Arg.Any<CommunityQuery>(), Arg.Any<CancellationToken>())
+            .Returns(ImmutableArray<CommunitySummary>.Empty);
+
+        using var directory = new CommunitiesViewModel(
+            services.Services, new RecordingNavigator(), services.Api, AppSettings.Default);
+        await directory.LoadAsync();
+
+        Window window = Show(new CommunitiesView(), directory);
+
+        Assert.That(
+            VisibleText(window).Any(text => text.Contains("No communities to show", StringComparison.Ordinal)),
+            Is.True);
+    }
+
+    [AvaloniaTest]
+    public async Task TheEmptyMessageGoesAwayOnceThereIsSomethingToShow()
+    {
+        var services = new TestServices();
+        services.Api.IsAuthenticated.Returns(true);
+        services.Api.GetCommunitiesAsync(Arg.Any<CommunityQuery>(), Arg.Any<CancellationToken>())
+            .Returns(ImmutableArray<CommunitySummary>.Empty);
+
+        using var directory = new CommunitiesViewModel(
+            services.Services, new RecordingNavigator(), services.Api, AppSettings.Default);
+        await directory.LoadAsync();
+        Assert.That(directory.HasNoCommunities, Is.True);
+
+        services.Api.GetCommunitiesAsync(Arg.Any<CommunityQuery>(), Arg.Any<CancellationToken>())
+            .Returns(ImmutableArray.Create(Sample.CommunitySummary()));
+        await directory.ReloadAsync();
+
+        Assert.That(directory.HasNoCommunities, Is.False);
+    }
 }

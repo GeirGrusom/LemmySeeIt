@@ -9,7 +9,7 @@
 
     <StackPanel Spacing="6">
         <TextBox Text="{Binding Text}"
-                 Watermark="{Binding Placeholder}"
+                 PlaceholderText="{Binding Placeholder}"
                  AcceptsReturn="True"
                  TextWrapping="Wrap"
                  MinHeight="76"

@@ -31,8 +31,12 @@ public sealed partial class CommunitiesViewModel : PageViewModel
         this.api = api;
         this.settings = settings;
 
-        query = new CommunityQuery(ListingType.Local, PostSortType.TopMonth, 1, PageSize.Clamp(PageSize.Maximum), settings.ShowNsfw);
-        selectedListing = ListingType.Local;
+        // Signed in, the communities worth listing are the reader's own; finding new ones is what
+        // Search is for. Signed out there are no subscriptions, so the instance's own list it is.
+        ListingType opening = api.IsAuthenticated ? ListingType.Subscribed : ListingType.Local;
+
+        query = new CommunityQuery(opening, PostSortType.TopMonth, 1, PageSize.Clamp(PageSize.Maximum), settings.ShowNsfw);
+        selectedListing = opening;
     }
 
     /// <inheritdoc />
@@ -41,8 +45,12 @@ public sealed partial class CommunitiesViewModel : PageViewModel
     /// <summary>The communities loaded so far.</summary>
     public ObservableCollection<CommunityRowViewModel> Communities { get; } = [];
 
-    /// <summary>The listings offered in the toolbar.</summary>
-    public static ReadOnlyCollection<ListingOption> ListingOptions => DisplayOptions.Listings;
+    /// <summary>
+    /// The listings offered in the toolbar. Subscribed only exists once there is an account to have
+    /// subscriptions, which is the same rule the feed uses.
+    /// </summary>
+    public ReadOnlyCollection<ListingOption> ListingOptions =>
+        api.IsAuthenticated ? DisplayOptions.SignedInListings : DisplayOptions.Listings;
 
     /// <summary>Whether the directory is showing local or all known communities.</summary>
     [ObservableProperty]
@@ -51,6 +59,18 @@ public sealed partial class CommunitiesViewModel : PageViewModel
     /// <summary>Whether another page is being fetched.</summary>
     [ObservableProperty]
     private bool isLoadingMore;
+
+    /// <summary>Whether the listing came back with nothing at all.</summary>
+    [ObservableProperty]
+    private bool hasNoCommunities;
+
+    /// <summary>
+    /// What to say when it did. An account that follows nothing opens on an empty Subscribed list,
+    /// and a blank tab with no explanation reads as a broken one.
+    /// </summary>
+    public string EmptyLabel => SelectedListing == ListingType.Subscribed
+        ? "You do not follow any communities yet. Search to find some."
+        : "No communities to show here.";
 
     /// <inheritdoc />
     public override Task LoadAsync() => ReloadAsync();
@@ -66,6 +86,7 @@ public sealed partial class CommunitiesViewModel : PageViewModel
         ClearCommunities();
         reachedEnd = false;
         Append(page);
+        HasNoCommunities = Communities.Count == 0;
     });
 
     /// <summary>Fetches the next page of the directory.</summary>
@@ -106,6 +127,7 @@ public sealed partial class CommunitiesViewModel : PageViewModel
         }
 
         query = query with { Listing = value };
+        OnPropertyChanged(nameof(EmptyLabel));
         _ = ReloadAsync();
     }
 
