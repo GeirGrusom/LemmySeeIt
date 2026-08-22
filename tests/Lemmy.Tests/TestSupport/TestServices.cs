@@ -42,8 +42,12 @@ internal sealed class TestServices
         SessionStore = new MemorySessionStore();
 
         Clock = FixedTimeProvider.AtReference();
-        Services = new AppServices(ApiFactory, ImageLoader, SettingsStore, LinkOpener, SessionStore, Clock);
+        Subscriptions = new SubscriptionTracker();
+        Services = new AppServices(
+            ApiFactory, ImageLoader, SettingsStore, LinkOpener, SessionStore, Clock, Subscriptions);
     }
+
+    internal SubscriptionTracker Subscriptions { get; }
 
     internal ILemmyApi Api { get; }
 

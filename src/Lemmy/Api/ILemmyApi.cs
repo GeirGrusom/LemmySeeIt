@@ -76,6 +76,20 @@ public interface ILemmyApi
     /// </exception>
     Task<VoteOutcome> VoteOnCommentAsync(CommentId commentId, Vote vote, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Follows or unfollows a community, and answers with where the account now stands. Following a
+    /// remote community usually comes back <see cref="SubscriptionState.Pending"/> rather than
+    /// subscribed: the follow has to travel to the community's own instance and be acknowledged.
+    /// </summary>
+    /// <exception cref="LemmyApiException">
+    /// Nobody is signed in, the session has stopped working, or the instance refused — which it does
+    /// for a community the account is banned from.
+    /// </exception>
+    Task<SubscriptionState> SetSubscriptionAsync(
+        CommunityId communityId,
+        bool follow,
+        CancellationToken cancellationToken = default);
+
     /// <summary>Fetches the instance's own description and totals.</summary>
     /// <exception cref="LemmyApiException">The server refused the request or sent something unusable.</exception>
     Task<SiteSummary> GetSiteAsync(CancellationToken cancellationToken = default);

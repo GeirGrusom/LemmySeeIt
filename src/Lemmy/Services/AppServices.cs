@@ -11,13 +11,15 @@ namespace Lemmy.Services;
 /// <param name="LinkOpener">Hands links to the platform's browser.</param>
 /// <param name="SessionStore">Where a signed-in session is kept between runs.</param>
 /// <param name="TimeProvider">The clock, so "3h ago" is testable.</param>
+/// <param name="Subscriptions">What the app knows about the account's subscriptions.</param>
 public sealed record AppServices(
     ILemmyApiFactory ApiFactory,
     IImageLoader ImageLoader,
     IAppSettingsStore SettingsStore,
     ILinkOpener LinkOpener,
     ISessionStore SessionStore,
-    TimeProvider TimeProvider)
+    TimeProvider TimeProvider,
+    SubscriptionTracker Subscriptions)
 {
     /// <summary>The real services, for an app that is actually running.</summary>
     public static AppServices CreateDefault(string userAgent, ISessionStore? sessionStore = null) =>
@@ -27,7 +29,8 @@ public sealed record AppServices(
             new FileAppSettingsStore(),
             new SystemLinkOpener(),
             sessionStore ?? SessionStores.CreateDefault(),
-            TimeProvider.System);
+            TimeProvider.System,
+            new SubscriptionTracker());
 
     /// <summary>The current time, as everything that formats a timestamp should ask for it.</summary>
     public DateTimeOffset Now => TimeProvider.GetUtcNow();

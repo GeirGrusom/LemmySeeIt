@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia;
@@ -8,6 +9,7 @@ using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using Lemmy;
+using Lemmy.Api;
 using Lemmy.Domain;
 using Lemmy.Domain.Models;
 using Lemmy.Services;
@@ -554,5 +556,94 @@ internal sealed class ViewRenderingTests
 
         await services.Api.Received(1).VoteOnPostAsync(Arg.Any<PostId>(), Vote.Up, Arg.Any<CancellationToken>());
         Assert.That(feed.Posts[0].Votes.IsUpvoted, Is.True);
+    }
+
+    [AvaloniaTest]
+    public async Task AFeedRowMarksAPostFromACommunityTheReaderFollows()
+    {
+        var services = new TestServices();
+        services.Api.IsAuthenticated.Returns(true);
+        services.Subscriptions.Record(new CommunityId(2), SubscriptionState.Subscribed);
+        using FeedViewModel feed = await LoadedFeedAsync(services);
+
+        Window window = Show(new FeedView(), feed);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(feed.Posts[0].IsFromSubscribedCommunity, Is.True);
+            Assert.That(VisibleText(window), Does.Contain("\u2713"));
+        });
+    }
+
+    [AvaloniaTest]
+    public async Task AFeedRowShowsNoMarkForACommunityTheReaderDoesNotFollow()
+    {
+        var services = new TestServices();
+        services.Api.IsAuthenticated.Returns(true);
+        using FeedViewModel feed = await LoadedFeedAsync(services);
+
+        Window window = Show(new FeedView(), feed);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(feed.Posts[0].IsFromSubscribedCommunity, Is.False);
+            Assert.That(VisibleText(window), Does.Not.Contain("\u2713"));
+        });
+    }
+
+    /// <summary>
+    /// The reason the tracker exists: subscribing somewhere else has to reach the rows already on
+    /// screen, which were told otherwise by the response that loaded them.
+    /// </summary>
+    [AvaloniaTest]
+    public async Task SubscribingElsewhereMarksTheRowsAlreadyOnScreen()
+    {
+        var services = new TestServices();
+        services.Api.IsAuthenticated.Returns(true);
+        using FeedViewModel feed = await LoadedFeedAsync(services);
+        Window window = Show(new FeedView(), feed);
+
+        Assert.That(VisibleText(window), Does.Not.Contain("\u2713"), "nothing followed to begin with");
+
+        services.Subscriptions.Record(new CommunityId(2), SubscriptionState.Subscribed);
+        Settle();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(feed.Posts[0].IsFromSubscribedCommunity, Is.True);
+            Assert.That(VisibleText(window), Does.Contain("\u2713"));
+        });
+    }
+
+    [AvaloniaTest]
+    public async Task TheCommunityDirectoryOffersASubscribeButtonWhenSignedIn()
+    {
+        var services = new TestServices();
+        services.Api.IsAuthenticated.Returns(true);
+        services.Api.GetCommunitiesAsync(Arg.Any<CommunityQuery>(), Arg.Any<CancellationToken>())
+            .Returns(ImmutableArray.Create(Sample.CommunitySummary()));
+
+        using var directory = new CommunitiesViewModel(services.Services, new RecordingNavigator(), services.Api, AppSettings.Default);
+        await directory.LoadAsync();
+
+        Window window = Show(new CommunitiesView(), directory);
+
+        Assert.That(VisibleText(window), Does.Contain("Subscribe"));
+    }
+
+    [AvaloniaTest]
+    public async Task TheCommunityDirectoryHidesTheButtonWhenSignedOut()
+    {
+        var services = new TestServices();
+        services.Api.IsAuthenticated.Returns(false);
+        services.Api.GetCommunitiesAsync(Arg.Any<CommunityQuery>(), Arg.Any<CancellationToken>())
+            .Returns(ImmutableArray.Create(Sample.CommunitySummary()));
+
+        using var directory = new CommunitiesViewModel(services.Services, new RecordingNavigator(), services.Api, AppSettings.Default);
+        await directory.LoadAsync();
+
+        Window window = Show(new CommunitiesView(), directory);
+
+        Assert.That(VisibleText(window), Does.Not.Contain("Subscribe"));
     }
 }

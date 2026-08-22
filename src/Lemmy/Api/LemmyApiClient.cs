@@ -323,6 +323,24 @@ public sealed class LemmyApiClient : ILemmyApi
         return WireMapper.MapVoteOutcome(response.CommentView);
     }
 
+    /// <inheritdoc />
+    public async Task<SubscriptionState> SetSubscriptionAsync(
+        CommunityId communityId,
+        bool follow,
+        CancellationToken cancellationToken = default)
+    {
+        RequireSession("subscribe");
+
+        CommunityResponse response = await PostAsync(
+            ApiRoot + "community/follow",
+            new FollowCommunityRequestWire { CommunityId = communityId.Value, Follow = follow },
+            LemmyJson.Context.FollowCommunityRequestWire,
+            LemmyJson.Context.CommunityResponse,
+            cancellationToken).ConfigureAwait(false);
+
+        return response.CommunityView?.Subscribed.ToSubscriptionState() ?? SubscriptionState.NotSubscribed;
+    }
+
     /// <summary>
     /// Fails before the request rather than after it. An unauthenticated write is answered by Lemmy
     /// with a generic error, and "not_logged_in" is not something to put in front of a reader.

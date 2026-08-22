@@ -48,6 +48,27 @@ score by two.
 The arrows only exist when somebody is signed in. Signed out the score stays the plain badge it
 always was, rather than controls that are visibly present and do nothing.
 
+## Subscribing has to agree with itself in several places at once
+
+A community is on screen in more places than one: a dozen feed rows, the directory, search results,
+the post it was opened from, its own page. Every one of those was told the subscription state by the
+response that carried it, so subscribing in any of them would leave all the others claiming the
+opposite until something refetched.
+
+`SubscriptionTracker` holds what the app has learned since. Each control asks it for the state,
+falling back to what its own response said, and is told when that community changes. The result is
+that following a community from its page marks the feed rows behind it immediately. The tracker is
+emptied whenever the instance changes or the session ends, because community ids are instance-local
+and one server's answers must never be attached to another's communities.
+
+A feed row gets a tick rather than a button. A subscribe control on every row of a scrolling feed is
+a column of mis-taps waiting to happen, and the community's own page is a tap away.
+
+Following a remote community normally comes back **Pending** rather than subscribed — the follow has
+to travel to the community's home instance and be acknowledged, which is not instant and is not a
+failure. Pending counts as following, so the button unsubscribes rather than trying to follow twice.
+The optimistic state is Pending too, for the same reason: it is the honest guess.
+
 ## Links go to the browser
 
 A link post's URL is a control rather than a line of text, and every post also offers "open on the

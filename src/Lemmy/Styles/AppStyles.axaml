@@ -194,4 +194,27 @@
         <Setter Property="Foreground" Value="{DynamicResource NegativeText}" />
     </Style>
 
+    <!-- Subscribe. Following is the quieter of the two states: it is a thing you already did, and
+         the loud version would be an unsubscribe button shouting on every community you follow. -->
+    <Style Selector="Button.subscribe">
+        <Setter Property="Background" Value="{DynamicResource AccentText}" />
+        <Setter Property="Foreground" Value="{DynamicResource AppBackground}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="BorderBrush" Value="{DynamicResource AccentText}" />
+        <Setter Property="CornerRadius" Value="12" />
+        <Setter Property="Padding" Value="12,4" />
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="Cursor" Value="Hand" />
+    </Style>
+
+    <Style Selector="Button.subscribe.following">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="Foreground" Value="{DynamicResource SecondaryText}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource SurfaceBorder}" />
+    </Style>
+
+    <Style Selector="Button.subscribe:disabled">
+        <Setter Property="Opacity" Value="0.5" />
+    </Style>
+
 </Styles>

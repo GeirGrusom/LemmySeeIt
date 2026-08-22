@@ -164,7 +164,8 @@ internal static class WireMapper
             MapTally(wire.Counts),
             wire.CreatorIsModerator,
             wire.CreatorIsAdmin,
-            wire.MyVote.ToVote());
+            wire.MyVote.ToVote(),
+            wire.Subscribed.ToSubscriptionState());
         return true;
     }
 
@@ -184,7 +185,7 @@ internal static class WireMapper
             VoteCount.Clamp(counts?.Comments ?? 0),
             VoteCount.Clamp(counts?.UsersActiveMonth ?? 0));
 
-        summary = new CommunitySummary(community, tally);
+        summary = new CommunitySummary(community, tally, wire.Subscribed.ToSubscriptionState());
         return true;
     }
 

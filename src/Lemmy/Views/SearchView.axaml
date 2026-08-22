@@ -43,7 +43,10 @@
                                         <TextBlock Classes="meta"
                                                    Foreground="{DynamicResource AccentText}"
                                                    Text="{Binding QualifiedName}" />
-                                        <TextBlock Classes="meta" Text="{Binding ActivityLabel}" />
+                                        <StackPanel Orientation="Horizontal" Spacing="10">
+                                            <TextBlock Classes="meta" VerticalAlignment="Center" Text="{Binding ActivityLabel}" />
+                                            <views:SubscribeButtonView DataContext="{Binding Subscription}" />
+                                        </StackPanel>
                                     </StackPanel>
                                 </Button>
                             </DataTemplate>

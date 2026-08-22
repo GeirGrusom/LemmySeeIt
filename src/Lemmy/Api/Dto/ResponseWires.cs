@@ -120,6 +120,20 @@ internal sealed record CommentResponse
     public CommentViewWire? CommentView { get; init; }
 }
 
+/// <summary>The body of <c>POST /api/v3/community/follow</c>.</summary>
+internal sealed record CommunityResponse
+{
+    public CommunityViewWire? CommunityView { get; init; }
+}
+
+/// <summary>The body sent to <c>POST /api/v3/community/follow</c>.</summary>
+internal sealed record FollowCommunityRequestWire
+{
+    public int CommunityId { get; init; }
+
+    public bool Follow { get; init; }
+}
+
 /// <summary>The body sent to <c>POST /api/v3/post/like</c>.</summary>
 internal sealed record VotePostRequestWire
 {

@@ -593,8 +593,11 @@ public sealed partial class MainViewModel : ViewModelBase, INavigator, IDisposab
 
     private void ApplyInstance(InstanceAddress address)
     {
-        // Nothing from the old server survives the switch, an open picture included.
+        // Nothing from the old server survives the switch, an open picture included. Subscriptions
+        // least of all: they are keyed by instance-local community ids, so keeping them would
+        // attach one server's answers to another server's communities.
         CloseImage();
+        services.Subscriptions.Clear();
 
         api = services.ApiFactory.Create(address, session);
         InstanceLabel = address.Value;

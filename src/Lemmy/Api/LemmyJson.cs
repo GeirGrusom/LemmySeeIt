@@ -22,6 +22,8 @@ namespace Lemmy.Api;
 [JsonSerializable(typeof(SearchResponse))]
 [JsonSerializable(typeof(GetSiteResponse))]
 [JsonSerializable(typeof(PostResponse))]
+[JsonSerializable(typeof(CommunityResponse))]
+[JsonSerializable(typeof(FollowCommunityRequestWire))]
 [JsonSerializable(typeof(CommentResponse))]
 [JsonSerializable(typeof(VotePostRequestWire))]
 [JsonSerializable(typeof(VoteCommentRequestWire))]

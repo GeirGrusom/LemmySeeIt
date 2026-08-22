@@ -1,0 +1,25 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:Lemmy.ViewModels"
+             mc:Ignorable="d"
+             x:Class="Lemmy.Views.SubscribeButtonView"
+             x:DataType="vm:SubscribeButtonViewModel"
+             IsVisible="{Binding CanSubscribe}">
+
+    <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+        <Button Classes="subscribe"
+                Classes.following="{Binding IsFollowing}"
+                Command="{Binding ToggleCommand}"
+                Content="{Binding Label}" />
+
+        <TextBlock Classes="meta"
+                   Foreground="{DynamicResource NegativeText}"
+                   MaxWidth="180"
+                   TextTrimming="CharacterEllipsis"
+                   ToolTip.Tip="{Binding ErrorMessage}"
+                   IsVisible="{Binding ErrorMessage, Converter={x:Static ObjectConverters.IsNotNull}}"
+                   Text="{Binding ErrorMessage}" />
+    </StackPanel>
+</UserControl>

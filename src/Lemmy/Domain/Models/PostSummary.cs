@@ -1,3 +1,5 @@
+using Lemmy.Domain;
+
 namespace Lemmy.Domain.Models;
 
 /// <summary>
@@ -12,6 +14,11 @@ namespace Lemmy.Domain.Models;
 /// <param name="CreatorIsModerator">Whether the author moderates the community.</param>
 /// <param name="CreatorIsAdmin">Whether the author administers the instance.</param>
 /// <param name="MyVote">How the signed-in account voted; <see cref="Vote.None"/> when signed out.</param>
+/// <param name="Subscription">
+/// Whether the account follows the community this was posted to; always
+/// <see cref="SubscriptionState.NotSubscribed"/> when signed out, because the server only says when
+/// there is somebody to say it about.
+/// </param>
 public sealed record PostSummary(
     Post Post,
     Person Creator,
@@ -19,7 +26,8 @@ public sealed record PostSummary(
     PostTally Tally,
     bool CreatorIsModerator,
     bool CreatorIsAdmin,
-    Vote MyVote = Vote.None)
+    Vote MyVote = Vote.None,
+    SubscriptionState Subscription = SubscriptionState.NotSubscribed)
 {
     /// <summary>Convenience accessor for the post's identifier.</summary>
     public PostId Id => Post.Id;

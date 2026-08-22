@@ -13,9 +13,10 @@
         <!-- Toolbar. -->
         <Border DockPanel.Dock="Top" Padding="10,8" Background="{DynamicResource AppBackground}">
             <StackPanel Spacing="6">
-                <TextBlock Classes="meta"
-                           IsVisible="{Binding IsCommunityFeed}"
-                           Text="{Binding SubtitleLabel}" />
+                <StackPanel Orientation="Horizontal" Spacing="10" IsVisible="{Binding IsCommunityFeed}">
+                    <TextBlock Classes="meta" VerticalAlignment="Center" Text="{Binding SubtitleLabel}" />
+                    <views:SubscribeButtonView DataContext="{Binding Subscription}" />
+                </StackPanel>
                 <StackPanel Orientation="Horizontal" Spacing="8">
                     <ComboBox ItemsSource="{x:Static vm:DisplayOptions.PostSorts}"
                               SelectedValue="{Binding SelectedSort}"

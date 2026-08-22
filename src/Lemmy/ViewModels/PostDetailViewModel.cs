@@ -52,6 +52,13 @@ public sealed partial class PostDetailViewModel : PageViewModel
         isImageHidden = settings.BlurNsfwImages && summary.Post.IsNsfw;
         selectedSort = settings.CommentSort;
 
+        Subscription = new SubscribeButtonViewModel(
+            summary.Community.Id,
+            summary.Subscription,
+            api.IsAuthenticated,
+            services.Subscriptions,
+            (follow, token) => api.SetSubscriptionAsync(summary.Community.Id, follow, token));
+
         Votes = new VoteBarViewModel(
             new VoteOutcome(summary.MyVote, summary.Tally.Score, summary.Tally.Upvotes, summary.Tally.Downvotes),
             api.IsAuthenticated,
@@ -63,6 +70,9 @@ public sealed partial class PostDetailViewModel : PageViewModel
 
     /// <summary>The arrows and the running score for the post itself.</summary>
     public VoteBarViewModel Votes { get; }
+
+    /// <summary>The subscribe control for the community the post is in.</summary>
+    public SubscribeButtonViewModel Subscription { get; }
 
     /// <inheritdoc />
     public override string Title => Summary.Post.Title.Value;
@@ -202,5 +212,16 @@ public sealed partial class PostDetailViewModel : PageViewModel
         }
 
         Image = await Services.ImageLoader.LoadAsync(link, ImageDecodeWidth, Lifetime).ConfigureAwait(true);
+    }
+
+    /// <inheritdoc />
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing)
+        {
+            Subscription.Dispose();
+        }
+
+        base.Dispose(disposing);
     }
 }

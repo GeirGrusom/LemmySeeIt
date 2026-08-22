@@ -48,6 +48,9 @@ internal sealed record CommunityViewWire
 {
     public CommunityWire? Community { get; init; }
 
+    /// <summary>"Subscribed", "NotSubscribed" or "Pending"; absent when nobody is signed in.</summary>
+    public string? Subscribed { get; init; }
+
     public CommunityAggregatesWire? Counts { get; init; }
 }
 

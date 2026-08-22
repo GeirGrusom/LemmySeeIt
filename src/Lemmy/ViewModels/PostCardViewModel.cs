@@ -18,6 +18,7 @@ public sealed partial class PostCardViewModel : ViewModelBase, IDisposable
     private const int ThumbnailDecodeWidth = 320;
 
     private readonly IImageLoader imageLoader;
+    private readonly SubscriptionTracker subscriptions;
     private readonly Action<PostCardViewModel> openRequested;
     private readonly Action<PostCardViewModel> viewImageRequested;
     private readonly CancellationTokenSource lifetime = new();
@@ -28,6 +29,7 @@ public sealed partial class PostCardViewModel : ViewModelBase, IDisposable
     /// <param name="now">The current time, for the age label.</param>
     /// <param name="blurNsfw">Whether images on posts flagged not safe for work start hidden.</param>
     /// <param name="api">The client the row votes through.</param>
+    /// <param name="subscriptions">Tells the row whether its community is one the reader follows.</param>
     /// <param name="openRequested">Called when the reader opens the post.</param>
     /// <param name="viewImageRequested">Called when the reader opens the picture without the post.</param>
     public PostCardViewModel(
@@ -36,17 +38,21 @@ public sealed partial class PostCardViewModel : ViewModelBase, IDisposable
         DateTimeOffset now,
         bool blurNsfw,
         ILemmyApi api,
+        SubscriptionTracker subscriptions,
         Action<PostCardViewModel> openRequested,
         Action<PostCardViewModel> viewImageRequested)
     {
         ArgumentNullException.ThrowIfNull(summary);
         ArgumentNullException.ThrowIfNull(imageLoader);
         ArgumentNullException.ThrowIfNull(api);
+        ArgumentNullException.ThrowIfNull(subscriptions);
         ArgumentNullException.ThrowIfNull(openRequested);
         ArgumentNullException.ThrowIfNull(viewImageRequested);
 
         Summary = summary;
         this.imageLoader = imageLoader;
+        this.subscriptions = subscriptions;
+        subscriptions.Changed += OnSubscriptionChanged;
         this.openRequested = openRequested;
         this.viewImageRequested = viewImageRequested;
 
@@ -79,6 +85,14 @@ public sealed partial class PostCardViewModel : ViewModelBase, IDisposable
 
     /// <summary>The arrows and the running score.</summary>
     public VoteBarViewModel Votes { get; }
+
+    /// <summary>
+    /// Whether this post came from a community the reader follows. A marker rather than a control:
+    /// a subscribe button on every row of a feed is a row of mis-taps waiting to happen, and the
+    /// community's own page has the button.
+    /// </summary>
+    public bool IsFromSubscribedCommunity =>
+        subscriptions.StateFor(Summary.Community.Id, Summary.Subscription).IsFollowing();
 
     /// <summary>The comment count, shortened for a badge.</summary>
     public string CommentsLabel => Summary.Tally.Comments.ToCompactString();
@@ -156,11 +170,21 @@ public sealed partial class PostCardViewModel : ViewModelBase, IDisposable
     /// <inheritdoc />
     public void Dispose()
     {
+        subscriptions.Changed -= OnSubscriptionChanged;
+
         if (!lifetime.IsCancellationRequested)
         {
             lifetime.Cancel();
         }
 
         lifetime.Dispose();
+    }
+
+    private void OnSubscriptionChanged(object? sender, CommunityId changed)
+    {
+        if (changed == Summary.Community.Id)
+        {
+            OnPropertyChanged(nameof(IsFromSubscribedCommunity));
+        }
     }
 }

@@ -4,8 +4,8 @@ A reading client for [Lemmy](https://join-lemmy.org), the federated link-aggrega
 refugees landed on. Browse an instance's front page, drill into a community, read a comment thread,
 search, and switch between servers. Sign in and you also get your subscribed feed.
 
-Signed in you can vote on posts and comments. Writing otherwise — posting, commenting, subscribing —
-is not built yet, and each post links out to its page on the web for that.
+Signed in you can vote on posts and comments and subscribe to communities. Writing otherwise —
+posting and commenting — is not built yet, and each post links out to its page on the web for that.
 
 Runs on Windows, Linux and Android from one shared codebase, with an iOS head that is kept
 compiling-ready.
@@ -130,6 +130,13 @@ pictures on the page — the feed keeps loading as you reach the end, so a comic
 reads a picture at a time. GIFs and animated WebP play here. Tap, press Escape or go back to close;
 arrow keys work on the desktop heads.
 
+**Subscribing.** Signed in, the community directory, a community's own page, a post page and search
+results all carry a subscribe button. Following a community on another server usually reads
+**Pending** for a moment: the follow has to reach that server and be acknowledged. Feed rows from a
+community you follow carry a green tick beside the community name, and subscribing anywhere updates
+every row already on screen without a refresh. The **Subscribed** listing on the feed is what
+following a community is for.
+
 **Communities and search.** Communities lists the directory for the current server, and Search
 covers both posts and communities on it.
 
@@ -146,8 +153,8 @@ images until tapped. Signing in adopts whatever your account already has set.
 
 ## Limitations
 
-- Commenting, posting and subscribing are not wired up; each post links out to the web instead.
-  Voting is the only thing this client writes.
+- Commenting and posting are not wired up; each post links out to the web instead. Voting and
+  subscribing are what this client writes.
 - AVIF images do not decode, so those posts show the server's preview rather than the original.
 - A comment thread is fetched eight levels deep in one request; "12 more replies" is shown but not
   yet loadable, and the thread has no pull-to-refresh.

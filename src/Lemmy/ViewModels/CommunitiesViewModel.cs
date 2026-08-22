@@ -63,7 +63,7 @@ public sealed partial class CommunitiesViewModel : PageViewModel
         query = query with { Page = 1 };
         ImmutableArray<CommunitySummary> page = await api.GetCommunitiesAsync(query, cancellationToken).ConfigureAwait(true);
 
-        Communities.Clear();
+        ClearCommunities();
         reachedEnd = false;
         Append(page);
     });
@@ -113,11 +113,32 @@ public sealed partial class CommunitiesViewModel : PageViewModel
     {
         foreach (CommunitySummary summary in page)
         {
-            Communities.Add(new CommunityRowViewModel(summary, Open));
+            Communities.Add(new CommunityRowViewModel(summary, api, Services.Subscriptions, Open));
         }
 
         // A short page is the only end-of-list signal a numbered pager gives us.
         reachedEnd = page.Length < query.PageSize.Value;
+    }
+
+    /// <inheritdoc />
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing)
+        {
+            ClearCommunities();
+        }
+
+        base.Dispose(disposing);
+    }
+
+    private void ClearCommunities()
+    {
+        foreach (CommunityRowViewModel row in Communities)
+        {
+            row.Dispose();
+        }
+
+        Communities.Clear();
     }
 
     private void Open(CommunityRowViewModel row) =>

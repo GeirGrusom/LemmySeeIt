@@ -14,6 +14,12 @@
             <!-- Community, author, age. -->
             <WrapPanel Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" Orientation="Horizontal">
                 <TextBlock Classes="meta" Foreground="{DynamicResource AccentText}" Text="{Binding CommunityLabel}" />
+                <TextBlock Classes="meta"
+                           Margin="4,0,0,0"
+                           Foreground="{DynamicResource PositiveText}"
+                           ToolTip.Tip="You follow this community"
+                           IsVisible="{Binding IsFromSubscribedCommunity}"
+                           Text="&#x2713;" />
                 <TextBlock Classes="meta" Text=" · " />
                 <TextBlock Classes="meta" Text="{Binding AuthorLabel}" />
                 <Border Classes="chip" Margin="6,0,0,0" IsVisible="{Binding HasAuthorBadge}">

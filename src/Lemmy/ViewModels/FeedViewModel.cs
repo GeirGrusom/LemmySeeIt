@@ -51,6 +51,16 @@ public sealed partial class FeedViewModel : PageViewModel, IImageGallery
 
         query = new FeedQuery(listing, settings.Sort, community?.Id, null, PageSize.Default, settings.ShowNsfw);
 
+        // Only a community's own feed has a community to subscribe to; the front page does not.
+        Subscription = community is null
+            ? null
+            : new SubscribeButtonViewModel(
+                community.Community.Id,
+                community.Subscription,
+                api.IsAuthenticated,
+                services.Subscriptions,
+                (follow, token) => api.SetSubscriptionAsync(community.Community.Id, follow, token));
+
         selectedSort = settings.Sort;
         selectedListing = listing;
     }
@@ -69,6 +79,9 @@ public sealed partial class FeedViewModel : PageViewModel, IImageGallery
 
     /// <summary>Whether this feed is one community rather than the whole instance.</summary>
     public bool IsCommunityFeed => community is not null;
+
+    /// <summary>The subscribe control, or <see langword="null"/> on the front page.</summary>
+    public SubscribeButtonViewModel? Subscription { get; }
 
     /// <summary>The community's subtitle line; empty on the front page, where the header says it already.</summary>
     public string SubtitleLabel =>
@@ -173,6 +186,7 @@ public sealed partial class FeedViewModel : PageViewModel, IImageGallery
         if (disposing)
         {
             ClearPosts();
+            Subscription?.Dispose();
         }
 
         base.Dispose(disposing);
@@ -204,7 +218,7 @@ public sealed partial class FeedViewModel : PageViewModel, IImageGallery
     {
         foreach (PostSummary summary in page.Posts)
         {
-            var card = new PostCardViewModel(summary, Services.ImageLoader, Services.Now, settings.BlurNsfwImages, api, OpenPost, ViewImage);
+            var card = new PostCardViewModel(summary, Services.ImageLoader, Services.Now, settings.BlurNsfwImages, api, Services.Subscriptions, OpenPost, ViewImage);
             Posts.Add(card);
 
             // Deliberately not awaited: the row is already on screen, and the image can catch up.

@@ -93,14 +93,14 @@ public sealed partial class SearchViewModel : PageViewModel, IImageGallery
         DateTimeOffset now = Services.Now;
         foreach (PostSummary summary in results.Posts)
         {
-            var card = new PostCardViewModel(summary, Services.ImageLoader, now, settings.BlurNsfwImages, api, OpenPost, ViewImage);
+            var card = new PostCardViewModel(summary, Services.ImageLoader, now, settings.BlurNsfwImages, api, Services.Subscriptions, OpenPost, ViewImage);
             Posts.Add(card);
             _ = card.LoadThumbnailAsync();
         }
 
         foreach (CommunitySummary summary in results.Communities)
         {
-            Communities.Add(new CommunityRowViewModel(summary, OpenCommunity));
+            Communities.Add(new CommunityRowViewModel(summary, api, Services.Subscriptions, OpenCommunity));
         }
 
         HasPostResults = Posts.Count > 0;
@@ -127,6 +127,12 @@ public sealed partial class SearchViewModel : PageViewModel, IImageGallery
         }
 
         Posts.Clear();
+
+        foreach (CommunityRowViewModel row in Communities)
+        {
+            row.Dispose();
+        }
+
         Communities.Clear();
         HasPostResults = false;
         HasCommunityResults = false;
