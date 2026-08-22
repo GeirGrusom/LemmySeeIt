@@ -3,6 +3,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:Lemmy.ViewModels"
+             xmlns:views="using:Lemmy.Views"
              xmlns:dm="using:Lemmy.Domain.Models"
              mc:Ignorable="d" d:DesignWidth="420" d:DesignHeight="700"
              x:Class="Lemmy.Views.AttributionView"
@@ -13,7 +14,7 @@
 
             <StackPanel Spacing="6">
                 <TextBlock Classes="title" Text="LemmySeeIt" />
-                <SelectableTextBlock Classes="licence" TextWrapping="Wrap"
+                <views:SelectableText Classes="licence" TextWrapping="Wrap"
                                      Text="{Binding ApplicationLicence}" />
             </StackPanel>
 
@@ -22,7 +23,7 @@
             <!-- The typeface is under different terms from the package that carries it, and the
                  OFL asks that this notice ship with the font. -->
             <Expander Header="Inter typeface">
-                <SelectableTextBlock Classes="licence" TextWrapping="Wrap"
+                <views:SelectableText Classes="licence" TextWrapping="Wrap"
                                      Text="{Binding FontNotice}" />
             </Expander>
 
@@ -76,7 +77,7 @@
                     <ItemsControl.ItemTemplate>
                         <DataTemplate x:DataType="vm:LicenceText">
                             <Expander Header="{Binding Identifier}" Margin="0,0,0,6">
-                                <SelectableTextBlock Classes="licence" TextWrapping="Wrap"
+                                <views:SelectableText Classes="licence" TextWrapping="Wrap"
                                                      Text="{Binding Body}" />
                             </Expander>
                         </DataTemplate>

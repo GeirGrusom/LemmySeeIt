@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using System.Text.Json;
 using Lemmy.Domain;
 using Lemmy.Domain.Models;
@@ -92,6 +93,7 @@ public sealed class FileAppSettingsStore : IAppSettingsStore
         CommentSort = settings.CommentSort.ToString(),
         ShowNsfw = settings.ShowNsfw,
         BlurNsfwImages = settings.BlurNsfwImages,
+        RecentInstances = [.. settings.Recent.Select(address => address.Value)],
     };
 
     private static AppSettings FromDocument(SettingsDocument document)
@@ -100,13 +102,27 @@ public sealed class FileAppSettingsStore : IAppSettingsStore
             ? parsed
             : AppSettings.Default.Instance;
 
+        // Anything unparseable in the remembered list is dropped rather than failing the load: the
+        // file outlives builds, and one bad entry should not cost the reader the rest of it.
+        ImmutableArray<InstanceAddress>.Builder recent = ImmutableArray.CreateBuilder<InstanceAddress>();
+        foreach (string candidate in document.RecentInstances ?? [])
+        {
+            if (InstanceAddress.TryParse(candidate.AsSpan(), out InstanceAddress remembered)
+                && !recent.Contains(remembered)
+                && recent.Count < AppSettings.MaxRecentInstances)
+            {
+                recent.Add(remembered);
+            }
+        }
+
         return new AppSettings(
             instance,
             ParseEnum(document.Listing, AppSettings.Default.Listing),
             ParseEnum(document.Sort, AppSettings.Default.Sort),
             ParseEnum(document.CommentSort, AppSettings.Default.CommentSort),
             document.ShowNsfw,
-            document.BlurNsfwImages);
+            document.BlurNsfwImages,
+            recent.ToImmutable());
     }
 
     /// <summary>

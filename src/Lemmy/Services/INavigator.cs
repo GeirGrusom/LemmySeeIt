@@ -1,3 +1,4 @@
+using Lemmy.Domain;
 using Lemmy.Domain.Models;
 using Lemmy.ViewModels;
 
@@ -26,4 +27,12 @@ public interface INavigator
     /// <param name="summary">The post whose picture to show first.</param>
     /// <param name="gallery">The page it came from, so the reader can move on to its other pictures.</param>
     void ShowImage(PostSummary summary, IImageGallery gallery);
+
+    /// <summary>
+    /// Shows a picture that is not a post — one written into a post body or a comment. There is no
+    /// page of pictures around it, so the viewer opens on this one alone.
+    /// </summary>
+    /// <param name="picture">The picture to show.</param>
+    /// <param name="caption">What to call it, usually the author's alt text.</param>
+    void ShowPicture(WebLink picture, string caption);
 }

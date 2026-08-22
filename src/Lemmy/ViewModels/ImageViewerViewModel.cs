@@ -80,20 +80,56 @@ public sealed partial class ImageViewerViewModel : ViewModelBase, IDisposable
         currentId = summary.Id;
     }
 
+    /// <summary>
+    /// Shows one picture that is not a post — an image written into a body. There is no page of
+    /// pictures to move through, so the gallery is empty and the arrows never light.
+    /// </summary>
+    /// <param name="picture">The picture to show.</param>
+    /// <param name="caption">What to call it, usually the author's alt text.</param>
+    /// <param name="imageLoader">Fetches and decodes it.</param>
+    /// <param name="close">Dismisses the viewer.</param>
+    public ImageViewerViewModel(WebLink picture, string caption, IImageLoader imageLoader, Action close)
+    {
+        ArgumentNullException.ThrowIfNull(imageLoader);
+        ArgumentNullException.ThrowIfNull(close);
+
+        gallery = EmptyGallery.Instance;
+        this.imageLoader = imageLoader;
+        this.close = close;
+
+        standalone = picture;
+        standaloneCaption = caption;
+    }
+
+    private readonly WebLink? standalone;
+    private readonly string? standaloneCaption;
+
+    /// <summary>A page with no pictures on it, so every gallery move is already at the end.</summary>
+    private sealed class EmptyGallery : IImageGallery
+    {
+        internal static EmptyGallery Instance { get; } = new();
+
+        public ImmutableArray<PostSummary> Images => [];
+
+        public bool CanLoadMore => false;
+
+        public Task LoadMoreAsync() => Task.CompletedTask;
+    }
+
     /// <summary>The post whose picture is on screen.</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(Title))]
     [NotifyPropertyChangedFor(nameof(CommunityLabel))]
-    private PostSummary summary;
+    private PostSummary? summary;
 
     /// <summary>The picture being shown, at its original resolution.</summary>
-    public WebLink? Link => Summary.Post.FullImage;
+    public WebLink? Link => Summary?.Post.FullImage ?? standalone;
 
-    /// <summary>The post's headline, shown over the picture.</summary>
-    public string Title => Summary.Post.Title.Value;
+    /// <summary>The post's headline, or the picture's alt text when it came from a body.</summary>
+    public string Title => Summary?.Post.Title.Value ?? standaloneCaption ?? string.Empty;
 
-    /// <summary>Where it was posted, so the reader knows what they are looking at.</summary>
-    public string CommunityLabel => Summary.Community.QualifiedName;
+    /// <summary>Where it was posted; empty for a picture that is not a post.</summary>
+    public string CommunityLabel => Summary?.Community.QualifiedName ?? string.Empty;
 
     /// <summary>The frame currently on screen — the whole picture when it does not animate.</summary>
     [ObservableProperty]
@@ -180,7 +216,7 @@ public sealed partial class ImageViewerViewModel : ViewModelBase, IDisposable
         // Some originals are in formats the platform cannot decode — AVIF is the one that turns up
         // in practice. The server's own thumbnail is always in a format it can, so a softer picture
         // beats no picture; the caption says so rather than pretending it is the real thing.
-        if (loaded is null && Summary.Post.Thumbnail is { } thumbnail && thumbnail != link)
+        if (loaded is null && Summary?.Post.Thumbnail is { } thumbnail && thumbnail != link)
         {
             loaded = await imageLoader.LoadPictureAsync(thumbnail, DecodeWidth, lifetime.Token).ConfigureAwait(true);
             isReduced = loaded is not null;
@@ -424,7 +460,7 @@ public sealed partial class ImageViewerViewModel : ViewModelBase, IDisposable
         }
 
         Summary = images[target];
-        currentId = Summary.Id;
+        currentId = images[target].Id;
 
         // A new picture starts fitted to the screen; carrying the previous zoom over would drop the
         // reader into a random corner of it.

@@ -286,7 +286,10 @@ internal static class WireMapper
         SiteWire? site = response.SiteView?.Site;
         SiteAggregatesWire? counts = response.SiteView?.Counts;
 
+        LocalSiteWire? local = response.SiteView?.LocalSite;
+
         MarkdownText.TryCreate((site?.Sidebar).AsSpan(), out MarkdownText sidebar);
+        MarkdownText.TryCreate((local?.ApplicationQuestion).AsSpan(), out MarkdownText question);
 
         return new SiteSummary(
             address,
@@ -297,7 +300,10 @@ internal static class WireMapper
             TryLink(site?.Banner),
             string.IsNullOrWhiteSpace(response.Version) ? null : response.Version,
             VoteCount.Clamp(counts?.Users ?? 0),
-            VoteCount.Clamp(counts?.Communities ?? 0));
+            VoteCount.Clamp(counts?.Communities ?? 0),
+            local?.RegistrationMode.ToRegistrationMode() ?? Domain.RegistrationMode.Unknown,
+            question,
+            local?.RequireEmailVerification ?? false);
     }
 
     internal static ImmutableArray<PostSummary> MapPostSummaries(ImmutableArray<PostViewWire> wires)

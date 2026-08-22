@@ -35,6 +35,24 @@ the part a reader feels but never sees is tested rather than eyeballed. Dismissa
 double-tap window: both gestures start with the same tap, and closing immediately fires halfway
 through every double-tap.
 
+## Pictures written into a body
+
+An image in Markdown is its own block rather than part of a paragraph. A paragraph is flattened to
+one continuous string so that it wraps and selects as a whole, and a picture is not text — so a
+paragraph with a picture in the middle is split into text, picture, text. Only pictures at the top
+level of a paragraph are lifted out: one nested inside a link is left as the alt text it always was,
+because an author who writes a picture inside a link means the link.
+
+They start folded away behind their alt text and are fetched on the first expand, never before. A
+comment thread can carry dozens, and opening every one on sight would spend the reader's data and
+their place in the thread on pictures they never asked to see. Expanding again after collapsing does
+not refetch. Once open, tapping the picture opens it full screen, where it can be zoomed.
+
+That full-screen viewer was built entirely around a post. A picture in a body has no post, so the
+viewer now takes either — and for the standalone case its gallery is an empty one rather than
+absent, which makes every "next picture" move a no-op through the same code path that already
+handled being at the end of a page.
+
 ## Formats
 
 Decoding is Skia's, by way of Avalonia, so the answer is whatever the bundled native build supports

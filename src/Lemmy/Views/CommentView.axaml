@@ -40,7 +40,8 @@
 
                 <md:MarkdownView IsVisible="{Binding !IsCollapsed}"
                                  Blocks="{Binding Content}"
-                                 LinkCommand="{Binding LinkCommand}" />
+                                 LinkCommand="{Binding LinkCommand}"
+                                 Media="{Binding Media}" />
 
                 <!-- Reply, and the author's own controls. Only shown unfolded: a collapsed comment
                      is one the reader has put away. -->
@@ -52,6 +53,12 @@
                             Content="Reply"
                             IsVisible="{Binding CanReply}"
                             Command="{Binding ReplyCommand}" />
+                    <!-- A finger cannot select text, so copying needs something to press. -->
+                    <Button Classes="link"
+                            IsVisible="{Binding CanCopy}"
+                            Command="{Binding CopyCommand}">
+                        <TextBlock Text="{Binding WasCopied, Converter={x:Static vm:CopyLabel.Instance}}" />
+                    </Button>
                     <Button Classes="link"
                             Content="Edit"
                             IsVisible="{Binding CanAmend}"

@@ -8,9 +8,16 @@ using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Layout;
 using Avalonia.Media;
+using Avalonia.Media.Imaging;
 using Avalonia.Media.TextFormatting;
+using System.Diagnostics;
+using Avalonia.Threading;
+using Lemmy.Services;
+using Avalonia.VisualTree;
 using Lemmy.Domain;
 using Lemmy.Domain.Markdown;
+using Lemmy.ViewModels;
+using Lemmy.Views;
 
 namespace Lemmy.Views.Markdown;
 
@@ -21,11 +28,29 @@ namespace Lemmy.Views.Markdown;
 /// </summary>
 public sealed class MarkdownView : Decorator
 {
+    /// <summary>Pictures in a body are drawn small; decoding them larger just burns memory.</summary>
+    private const int ImageDecodeWidth = 720;
+
+    /// <summary>How tall one may grow before it starts pushing the text off the screen.</summary>
+    private const int ImageMaxHeight = 420;
+
+    /// <summary>How often an animation is asked which frame it is on.</summary>
+    private static readonly TimeSpan FrameTick = TimeSpan.FromMilliseconds(40);
+
+    private readonly List<RunningPicture> animations = [];
+
+    /// <summary>Bumped whenever the drawn tree is replaced, so a load in flight can tell.</summary>
+    private int generation;
+
     /// <summary>The blocks to draw.</summary>
     public static readonly StyledProperty<ImmutableArray<MarkdownBlock>> BlocksProperty =
         AvaloniaProperty.Register<MarkdownView, ImmutableArray<MarkdownBlock>>(nameof(Blocks));
 
     /// <summary>Invoked with the <see cref="WebLink"/> the reader pressed.</summary>
+    /// <summary>How to fetch and open pictures written into the body.</summary>
+    public static readonly StyledProperty<MarkdownMedia?> MediaProperty =
+        AvaloniaProperty.Register<MarkdownView, MarkdownMedia?>(nameof(Media));
+
     public static readonly StyledProperty<ICommand?> LinkCommandProperty =
         AvaloniaProperty.Register<MarkdownView, ICommand?>(nameof(LinkCommand));
 
@@ -68,6 +93,13 @@ public sealed class MarkdownView : Decorator
         set => SetValue(BlocksProperty, value);
     }
 
+    /// <inheritdoc cref="MediaProperty" />
+    public MarkdownMedia? Media
+    {
+        get => GetValue(MediaProperty);
+        set => SetValue(MediaProperty, value);
+    }
+
     /// <inheritdoc cref="LinkCommandProperty" />
     public ICommand? LinkCommand
     {
@@ -106,6 +138,7 @@ public sealed class MarkdownView : Decorator
     private void Rebuild()
     {
         sources.Clear();
+        StopAnimations();
 
         ImmutableArray<MarkdownBlock> blocks = Blocks;
         Child = blocks.IsDefaultOrEmpty ? null : BuildBlocks(blocks);
@@ -131,6 +164,7 @@ public sealed class MarkdownView : Decorator
         MarkdownQuote quote => BuildQuote(quote),
         MarkdownList list => BuildList(list),
         MarkdownSpoiler spoiler => BuildSpoiler(spoiler),
+        MarkdownImage image => BuildImage(image),
         MarkdownThematicBreak => BuildRule(),
         MarkdownTable table => BuildTable(table),
         _ => new TextBlock { Text = string.Empty },
@@ -148,7 +182,7 @@ public sealed class MarkdownView : Decorator
             _ => 15,
         };
 
-        SelectableTextBlock text = BuildText(heading.Content);
+        SelectableText text = BuildText(heading.Content);
         text.FontSize = size;
         text.FontWeight = FontWeight.SemiBold;
         text.Margin = new Thickness(0, 4, 0, 0);
@@ -166,7 +200,7 @@ public sealed class MarkdownView : Decorator
             {
                 HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
                 VerticalScrollBarVisibility = ScrollBarVisibility.Disabled,
-                Content = new SelectableTextBlock
+                Content = new SelectableText
                 {
                     Text = code.Text,
                     FontFamily = MonospaceFont,
@@ -226,6 +260,152 @@ public sealed class MarkdownView : Decorator
             Content = BuildBlocks(spoiler.Children),
         };
 
+    /// <summary>
+    /// A picture, folded away behind its alt text until asked for.
+    /// </summary>
+    /// <remarks>
+    /// Collapsed by default and fetched only on the first expand. A thread can carry dozens of
+    /// these, and opening every one on sight would spend the reader's data and their scroll
+    /// position on pictures they never asked to see. Once open, tapping it opens it full screen,
+    /// where it can be zoomed.
+    /// </remarks>
+    private Control BuildImage(MarkdownImage image)
+    {
+        var content = new Panel { MinHeight = 24 };
+
+        var expander = new Expander
+        {
+            // A picture with no alt text has nothing to add after the dash.
+            Header = string.IsNullOrWhiteSpace(image.AltText) ? "Image" : $"Image — {image.AltText}",
+            IsExpanded = false,
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+            Content = content,
+        };
+
+        expander.PropertyChanged += (_, change) =>
+        {
+            if (change.Property == Expander.IsExpandedProperty
+                && expander.IsExpanded
+                && content.Children.Count == 0)
+            {
+                // Not awaited: the expander opens now and fills in when the picture arrives.
+                _ = RevealAsync(content, image);
+            }
+        };
+
+        return expander;
+    }
+
+    private async Task RevealAsync(Panel content, MarkdownImage image)
+    {
+        int mine = generation;
+
+        if (Media is not { } media)
+        {
+            content.Children.Add(new TextBlock { Text = "No way to load pictures here." });
+            return;
+        }
+
+        var progress = new ProgressBar { IsIndeterminate = true, Height = 3, Margin = new Thickness(0, 8) };
+        content.Children.Add(progress);
+
+        // The picture loader rather than the thumbnail one: it decodes every frame, so a GIF in a
+        // comment moves. What comes back is ours to dispose — unlike a cached thumbnail, which is
+        // shared with whatever else is showing it.
+        AnimatedImage? picture = await media.Images
+            .LoadPictureAsync(image.Source, ImageDecodeWidth)
+            .ConfigureAwait(true);
+
+        content.Children.Remove(progress);
+
+        if (picture is null)
+        {
+            content.Children.Add(new TextBlock
+            {
+                Text = "That picture could not be loaded.",
+                TextWrapping = TextWrapping.Wrap,
+            });
+            return;
+        }
+
+        // The view may have been rebuilt or torn down while that was in flight, in which case this
+        // picture belongs to a tree nobody is looking at. Checked by generation rather than by
+        // attachment: an expander's content is not attached until it has been laid out, which has
+        // not happened yet at this point.
+        if (mine != generation)
+        {
+            picture.Dispose();
+            return;
+        }
+
+        var control = new Image
+        {
+            Source = picture.FirstFrame,
+            Stretch = Stretch.Uniform,
+            StretchDirection = StretchDirection.DownOnly,
+            HorizontalAlignment = HorizontalAlignment.Left,
+            MaxHeight = ImageMaxHeight,
+            Cursor = new Cursor(StandardCursorType.Hand),
+        };
+
+        // Tapped rather than pressed: the thread scrolls, and a drag that begins on a picture is
+        // somebody scrolling past it.
+        control.Tapped += (_, _) => media.OpenPicture?.Execute(image);
+
+        content.Children.Add(control);
+        Play(picture, control);
+    }
+
+    /// <summary>
+    /// Starts a picture moving, if it moves at all. Time is mapped to a frame rather than a frame
+    /// advanced per tick, so a device that cannot keep up drops frames instead of playing the whole
+    /// thing in slow motion — the same rule the full-screen viewer follows.
+    /// </summary>
+    private void Play(AnimatedImage picture, Image control)
+    {
+        if (!picture.IsAnimated)
+        {
+            animations.Add(new RunningPicture(picture, null, null));
+            return;
+        }
+
+        var clock = Stopwatch.StartNew();
+        var timer = new DispatcherTimer(DispatcherPriority.Render) { Interval = FrameTick };
+
+        timer.Tick += (_, _) => control.Source = picture.Frames[picture.FrameIndexAt(clock.Elapsed)].Image;
+        timer.Start();
+
+        animations.Add(new RunningPicture(picture, timer, clock));
+    }
+
+    /// <summary>
+    /// Stops and releases every picture this view started. Called when the blocks change and when
+    /// the view leaves the tree: a comment thread scrolls, and a timer left running on a comment
+    /// nobody is looking at costs frames for nothing.
+    /// </summary>
+    private void StopAnimations()
+    {
+        generation++;
+
+        foreach (RunningPicture running in animations)
+        {
+            running.Timer?.Stop();
+            running.Clock?.Stop();
+            running.Picture.Dispose();
+        }
+
+        animations.Clear();
+    }
+
+    /// <inheritdoc />
+    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        StopAnimations();
+        base.OnDetachedFromVisualTree(e);
+    }
+
+    private sealed record RunningPicture(AnimatedImage Picture, DispatcherTimer? Timer, Stopwatch? Clock);
+
     private Control BuildRule() =>
         new Border
         {
@@ -276,7 +456,7 @@ public sealed class MarkdownView : Decorator
 
         for (int column = 0; column < cells.Length; column++)
         {
-            SelectableTextBlock cell = BuildText(cells[column]);
+            SelectableText cell = BuildText(cells[column]);
             cell.TextWrapping = TextWrapping.NoWrap;
 
             if (isHeader)
@@ -295,9 +475,9 @@ public sealed class MarkdownView : Decorator
     /// over it, so it wraps and selects normally; link targets are remembered by character range
     /// and resolved by hit-testing whatever the reader pressed.
     /// </summary>
-    private SelectableTextBlock BuildText(RichText text)
+    private SelectableText BuildText(RichText text)
     {
-        var block = new SelectableTextBlock
+        var block = new SelectableText
         {
             TextWrapping = TextWrapping.Wrap,
             Padding = default,

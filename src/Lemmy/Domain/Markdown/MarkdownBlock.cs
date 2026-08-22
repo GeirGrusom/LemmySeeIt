@@ -1,5 +1,7 @@
 using System.Collections.Immutable;
 
+using Lemmy.Domain;
+
 namespace Lemmy.Domain.Markdown;
 
 /// <summary>
@@ -48,6 +50,15 @@ public sealed record MarkdownList(
 /// <param name="Title">What the fold says before it is opened.</param>
 /// <param name="Children">What it hides.</param>
 public sealed record MarkdownSpoiler(string Title, ImmutableArray<MarkdownBlock> Children) : MarkdownBlock;
+
+/// <summary>
+/// A picture written into the body. Its own block rather than part of a paragraph: a paragraph is
+/// flattened to one continuous string so it wraps and selects as a whole, and a picture is not text.
+/// A paragraph with a picture in the middle is split around it.
+/// </summary>
+/// <param name="Source">Where the picture is.</param>
+/// <param name="AltText">What the author called it; empty when they called it nothing.</param>
+public sealed record MarkdownImage(WebLink Source, string AltText) : MarkdownBlock;
 
 /// <summary>A horizontal rule.</summary>
 public sealed record MarkdownThematicBreak : MarkdownBlock;

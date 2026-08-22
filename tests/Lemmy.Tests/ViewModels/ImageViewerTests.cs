@@ -108,7 +108,7 @@ internal sealed class ImageViewerTests
         Assert.Multiple(() =>
         {
             Assert.That(shell.ImageViewer, Is.Not.SameAs(first));
-            Assert.That(shell.ImageViewer!.Summary.Id, Is.EqualTo(new PostId(11)));
+            Assert.That(shell.ImageViewer!.Summary!.Id, Is.EqualTo(new PostId(11)));
         });
     }
 

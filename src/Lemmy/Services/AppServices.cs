@@ -13,6 +13,7 @@ namespace Lemmy.Services;
 /// <param name="TimeProvider">The clock, so "3h ago" is testable.</param>
 /// <param name="Subscriptions">What the app knows about the account's subscriptions.</param>
 /// <param name="Account">Who is signed in, for rows that need to know whether something is theirs.</param>
+/// <param name="Copier">Puts text on the clipboard, which a finger cannot do by selecting.</param>
 public sealed record AppServices(
     ILemmyApiFactory ApiFactory,
     IImageLoader ImageLoader,
@@ -21,19 +22,26 @@ public sealed record AppServices(
     ISessionStore SessionStore,
     TimeProvider TimeProvider,
     SubscriptionTracker Subscriptions,
-    CurrentAccount Account)
+    CurrentAccount Account,
+    ITextCopier Copier)
 {
     /// <summary>The real services, for an app that is actually running.</summary>
-    public static AppServices CreateDefault(string userAgent, ISessionStore? sessionStore = null) =>
-        new(
+    public static AppServices CreateDefault(string userAgent, ISessionStore? sessionStore = null)
+    {
+        // One object holds the window, so the two things that need it share an instance.
+        var platform = new SystemLinkOpener();
+
+        return new AppServices(
             new LemmyApiFactory(userAgent),
             new ImageLoader(userAgent),
             new FileAppSettingsStore(),
-            new SystemLinkOpener(),
+            platform,
             sessionStore ?? SessionStores.CreateDefault(),
             TimeProvider.System,
             new SubscriptionTracker(),
-            new CurrentAccount());
+            new CurrentAccount(),
+            platform);
+    }
 
     /// <summary>The current time, as everything that formats a timestamp should ask for it.</summary>
     public DateTimeOffset Now => TimeProvider.GetUtcNow();

@@ -60,6 +60,23 @@ internal sealed record SiteViewWire
     public SiteWire? Site { get; init; }
 
     public SiteAggregatesWire? Counts { get; init; }
+
+    public LocalSiteWire? LocalSite { get; init; }
+}
+
+/// <summary>
+/// The instance's own policy, which only its own server reports. Lemmy carries a couple of dozen
+/// settings here; these are the ones that decide whether signing up is worth offering.
+/// </summary>
+internal sealed record LocalSiteWire
+{
+    /// <summary>"Open", "RequireApplication" or "Closed".</summary>
+    public string? RegistrationMode { get; init; }
+
+    /// <summary>What the instance asks applicants, when it asks anything.</summary>
+    public string? ApplicationQuestion { get; init; }
+
+    public bool RequireEmailVerification { get; init; }
 }
 
 /// <summary>An instance's own record as Lemmy's API v3 sends it.</summary>

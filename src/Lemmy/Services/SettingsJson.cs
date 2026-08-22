@@ -20,9 +20,13 @@ internal sealed record SettingsDocument
     public bool ShowNsfw { get; init; }
 
     public bool BlurNsfwImages { get; init; } = true;
+
+    /// <summary>Servers the reader has used, most recent first.</summary>
+    public string[]? RecentInstances { get; init; }
 }
 
 /// <summary>Source-generated serializer for the settings file.</summary>
 [JsonSourceGenerationOptions(WriteIndented = true, PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
 [JsonSerializable(typeof(SettingsDocument))]
+[JsonSerializable(typeof(string[]))]
 internal sealed partial class SettingsJsonContext : JsonSerializerContext;

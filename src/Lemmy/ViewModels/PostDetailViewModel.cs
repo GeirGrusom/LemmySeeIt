@@ -63,6 +63,9 @@ public sealed partial class PostDetailViewModel : PageViewModel
         // to do on this page, and a button that reveals a box is one tap more for every comment.
         Composer = new CommentComposerViewModel(ComposerPurpose.Comment, PostCommentAsync);
 
+        // Built once and handed down the whole thread: every comment renders pictures the same way.
+        Media = new MarkdownMedia(services.ImageLoader, OpenPictureCommand);
+
         Votes = new VoteBarViewModel(
             new VoteOutcome(summary.MyVote, summary.Tally.Score, summary.Tally.Upvotes, summary.Tally.Downvotes),
             api.IsAuthenticated,
@@ -80,6 +83,9 @@ public sealed partial class PostDetailViewModel : PageViewModel
 
     /// <summary>The box for adding a comment to the post.</summary>
     public CommentComposerViewModel Composer { get; }
+
+    /// <summary>How pictures written into the post or its comments are fetched and opened.</summary>
+    public MarkdownMedia Media { get; }
 
     /// <summary>Whether anybody is signed in to comment at all.</summary>
     public bool CanComment => api.IsAuthenticated && !Summary.Post.IsLocked;
@@ -167,7 +173,7 @@ public sealed partial class PostDetailViewModel : PageViewModel
         DateTimeOffset now = Services.Now;
         foreach (CommentNode root in thread.Roots)
         {
-            Comments.Add(new CommentViewModel(root, now, api, Services.Account, OpenMarkdownLinkCommand));
+            Comments.Add(new CommentViewModel(root, now, api, Services.Account, Media, Services.Copier, OpenMarkdownLinkCommand));
         }
 
         HasNoComments = Comments.Count == 0;
@@ -224,6 +230,19 @@ public sealed partial class PostDetailViewModel : PageViewModel
         Image = await Services.ImageLoader.LoadAsync(link, ImageDecodeWidth, Lifetime).ConfigureAwait(true);
     }
 
+    /// <summary>Copies the post's body as the Markdown it was written in.</summary>
+    [RelayCommand]
+    private async Task CopyBodyAsync() =>
+        WasCopied = await Services.Copier.CopyAsync(Summary.Post.Body.Value).ConfigureAwait(true);
+
+    /// <summary>Set once a copy succeeds.</summary>
+    [ObservableProperty]
+    private bool wasCopied;
+
+    /// <summary>Opens a picture from a body full screen, where it can be zoomed.</summary>
+    [RelayCommand]
+    private void OpenPicture(MarkdownImage image) => Navigator.ShowPicture(image.Source, image.AltText);
+
     private async Task PostCommentAsync(CommentDraft draft, CancellationToken cancellationToken)
     {
         CommentNode posted = await api
@@ -232,7 +251,7 @@ public sealed partial class PostDetailViewModel : PageViewModel
 
         // At the top, whatever the thread is sorted by: the sort is the server's answer to a
         // question asked before this comment existed.
-        Comments.Insert(0, new CommentViewModel(posted, Services.Now, api, Services.Account, OpenMarkdownLinkCommand));
+        Comments.Insert(0, new CommentViewModel(posted, Services.Now, api, Services.Account, Media, Services.Copier, OpenMarkdownLinkCommand));
         HasNoComments = false;
     }
 

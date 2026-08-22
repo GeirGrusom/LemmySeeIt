@@ -106,9 +106,11 @@ checked into the repository, so they need no network.
 The app opens on **lemmy.world**. Three sections sit along the bottom: **Feed**, **Communities** and
 **Search**.
 
-**Choosing a server.** The instance name in the header opens Settings, where you can type another
-one — `lemmy.ml`, `beehaw.org`, `sh.itjust.works` or any other — and switch. Lemmy is many servers,
-and posts, communities and accounts each belong to one of them. Your choice is remembered.
+**Choosing a server.** The instance name in the header opens Settings, which lists the servers you
+have used and a dozen well-known ones to start from — or you can type any other address. Lemmy is
+many servers, and posts, communities and accounts each belong to one of them, so switching signs you
+out of the one you are on; while signed in the app asks before doing that. Your choice and the
+servers you have visited are remembered.
 
 **The feed.** Two pickers set what you see: a sort (Active, Hot, Scaled, New, Top of the
 day/week/month/all time, Most Comments) and a listing (All, or Local for communities hosted on the
@@ -123,6 +125,16 @@ comment or subscribe. Back returns to the feed at the row you were on, not the t
 score. Pressing the arrow you already chose takes the vote back. The score moves as you press it
 rather than after the server answers, and moves back with a reason if the vote does not take.
 Signed out the arrows are not shown at all — just the score, as before.
+
+**Copying text.** Post bodies and comments have a **Copy** button, which puts the original Markdown
+on the clipboard. Dragging a finger scrolls rather than selecting — a phone has no handles to adjust
+a selection with and no menu to copy it from, so the button is the way. With a mouse, text still
+selects by dragging and copies with Ctrl+C.
+
+**Pictures in a body.** An image written into a post or comment appears folded away behind its
+description — *Image — the chart* — and opens where you tap it. Once open, tapping the picture puts
+it full screen with pinch-zoom. Nothing is downloaded until you ask for it, so a thread full of
+images costs nothing to scroll past.
 
 **Pictures.** Tap the thumbnail on a feed row to open the picture full screen without opening the
 post. Double-tap or pinch to zoom, drag to pan, and flick left and right to move through the other
@@ -146,6 +158,11 @@ placeholder in the thread — so the replies under it still hang off something �
 offers All and Local, and signed out it opens on Local. Finding communities you do not already
 follow is what Search is for — it covers both posts and communities on the current server.
 
+**No account yet?** The sign-in sheet says whether the current server is taking new ones — some
+require an admin to approve each application — and links out to its own sign-up page. Account
+creation happens in a browser, because it can involve a captcha, an application to write and an
+email to confirm.
+
 **Signing in** is optional — everything above works without it. An account adds the **Subscribed**
 listing to the feed, shows the votes you have already cast, and is what turns the vote arrows on.
 The account control is in the header, next to the instance name; signing out lives inside the
@@ -165,8 +182,7 @@ images until tapped. Signing in adopts whatever your account already has set.
 - AVIF images do not decode, so those posts show the server's preview rather than the original.
 - A comment thread is fetched eight levels deep in one request; "12 more replies" is shown but not
   yet loadable, and the thread has no pull-to-refresh.
-- `@user@instance` and `!community@instance` mentions are not linkified, and images inside a post
-  body render as a link rather than inline.
+- `@user@instance` and `!community@instance` mentions are not linkified.
 - The iOS head keeps a session in memory only — it has no keychain support yet, so signing in does
   not survive a restart there.
 

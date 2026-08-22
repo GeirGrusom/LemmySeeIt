@@ -1,4 +1,5 @@
 using Avalonia.Controls;
+using Avalonia.Input.Platform;
 using Lemmy.Domain;
 
 namespace Lemmy.Services;
@@ -13,12 +14,31 @@ namespace Lemmy.Services;
 /// application lifetime — which varies by platform — the host is handed in once the shell is on
 /// screen, and taken away again when it is not.
 /// </remarks>
-public sealed class SystemLinkOpener : ILinkOpener
+public sealed class SystemLinkOpener : ILinkOpener, ITextCopier
 {
     private TopLevel? host;
 
     /// <summary>Points the opener at the window currently on screen, or at nothing.</summary>
     public void Attach(TopLevel? topLevel) => host = topLevel;
+
+    /// <inheritdoc />
+    public async Task<bool> CopyAsync(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text) || host?.Clipboard is not { } clipboard)
+        {
+            return false;
+        }
+
+        try
+        {
+            await clipboard.SetTextAsync(text).ConfigureAwait(true);
+            return true;
+        }
+        catch (Exception exception) when (exception is InvalidOperationException or PlatformNotSupportedException)
+        {
+            return false;
+        }
+    }
 
     /// <inheritdoc />
     public async Task<bool> OpenAsync(WebLink link)

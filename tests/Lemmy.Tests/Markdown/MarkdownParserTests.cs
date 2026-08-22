@@ -122,23 +122,85 @@ internal sealed class MarkdownParserTests
     }
 
     [Test]
-    public void AnImageBecomesItsAltTextLinkedToThePicture()
+    public void AnImageBecomesAPictureRatherThanALinkToOne()
     {
-        RichText text = ParagraphText("![a chart](https://example.com/c.png)");
+        ImmutableArray<MarkdownBlock> blocks = Parse("![a chart](https://example.com/c.png)");
+
+        Assert.That(blocks, Has.Length.EqualTo(1));
+        var image = (MarkdownImage)blocks[0];
 
         Assert.Multiple(() =>
         {
-            Assert.That(text.Text, Is.EqualTo("a chart"));
-            Assert.That(text.LinkAt(0)?.Value, Is.EqualTo("https://example.com/c.png"));
+            Assert.That(image.Source.Value, Is.EqualTo("https://example.com/c.png"));
+            Assert.That(image.AltText, Is.EqualTo("a chart"));
         });
     }
 
     [Test]
-    public void AnImageWithNoAltTextStillHasSomethingToPress()
+    public void AnImageWithNoAltTextCarriesNoneRatherThanAStandIn()
     {
-        RichText text = ParagraphText("![](https://example.com/c.png)");
+        // What to call a nameless picture is the renderer's business.
+        ImmutableArray<MarkdownBlock> blocks = Parse("![](https://example.com/c.png)");
 
-        Assert.That(text.Text, Is.EqualTo("image"));
+        Assert.That(((MarkdownImage)blocks[0]).AltText, Is.Empty);
+    }
+
+    [Test]
+    public void TextEitherSideOfAPictureStaysAParagraph()
+    {
+        ImmutableArray<MarkdownBlock> blocks = Parse("before ![a chart](https://example.com/c.png) after");
+
+        Assert.That(blocks, Has.Length.EqualTo(3));
+        Assert.Multiple(() =>
+        {
+            Assert.That(((MarkdownParagraph)blocks[0]).Content.Text, Is.EqualTo("before"));
+            Assert.That(((MarkdownImage)blocks[1]).Source.Value, Is.EqualTo("https://example.com/c.png"));
+            Assert.That(((MarkdownParagraph)blocks[2]).Content.Text, Is.EqualTo("after"));
+        });
+    }
+
+    [Test]
+    public void SeveralPicturesInOneParagraphEachBecomeTheirOwnBlock()
+    {
+        ImmutableArray<MarkdownBlock> blocks =
+            Parse("![one](https://example.com/1.png) ![two](https://example.com/2.png)");
+
+        Assert.That(blocks.OfType<MarkdownImage>().Count(), Is.EqualTo(2));
+    }
+
+    [Test]
+    public void APictureInsideALinkStaysTheLinkItWasWrittenAs()
+    {
+        // The author wrote a link and used a picture as its label; the link is the point.
+        ImmutableArray<MarkdownBlock> blocks =
+            Parse("[![a chart](https://example.com/c.png)](https://example.com/page)");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(blocks.OfType<MarkdownImage>(), Is.Empty);
+            Assert.That(((MarkdownParagraph)blocks[0]).Content.Text, Is.EqualTo("a chart"));
+        });
+    }
+
+    [Test]
+    public void APictureWithAnUnusableAddressIsLeftAsText()
+    {
+        ImmutableArray<MarkdownBlock> blocks = Parse("![broken](not-a-url)");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(blocks.OfType<MarkdownImage>(), Is.Empty);
+            Assert.That(((MarkdownParagraph)blocks[0]).Content.Text, Is.EqualTo("broken"));
+        });
+    }
+
+    [Test]
+    public void APictureInsideAQuoteIsStillAPicture()
+    {
+        ImmutableArray<MarkdownBlock> blocks = Parse("> ![a chart](https://example.com/c.png)");
+
+        var quote = (MarkdownQuote)blocks[0];
+        Assert.That(quote.Children.OfType<MarkdownImage>().Count(), Is.EqualTo(1));
     }
 
     [Test]

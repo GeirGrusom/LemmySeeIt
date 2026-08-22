@@ -54,6 +54,14 @@ public static class MarkdownParser
 
         foreach (Block child in container)
         {
+            // A paragraph can come back as several blocks, because a picture written into it is
+            // lifted out and the text either side stays a paragraph.
+            if (child is ParagraphBlock paragraph)
+            {
+                blocks.AddRange(InlineReader.ReadBlocks(paragraph.Inline));
+                continue;
+            }
+
             if (Convert(child, depth) is { } block)
             {
                 blocks.Add(block);
@@ -74,7 +82,6 @@ public static class MarkdownParser
 
         return block switch
         {
-            ParagraphBlock paragraph => new MarkdownParagraph(InlineReader.Read(paragraph.Inline)),
             HeadingBlock heading => new MarkdownHeading(
                 Math.Clamp(heading.Level, 1, 6),
                 InlineReader.Read(heading.Inline)),

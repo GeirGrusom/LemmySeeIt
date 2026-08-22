@@ -1,3 +1,4 @@
+using Lemmy.Domain;
 using Lemmy.Domain.Models;
 using Lemmy.Services;
 using Lemmy.ViewModels;
@@ -17,6 +18,8 @@ internal sealed class RecordingNavigator : INavigator
 
     internal IImageGallery? LastGallery { get; private set; }
 
+    internal List<(WebLink Picture, string Caption)> PicturesShown { get; } = [];
+
     public bool CanPop => pushed.Count > 0;
 
     public void Push(PageViewModel page) => pushed.Add(page);
@@ -28,4 +31,6 @@ internal sealed class RecordingNavigator : INavigator
         ImagesShown.Add(summary);
         LastGallery = gallery;
     }
+
+    public void ShowPicture(WebLink picture, string caption) => PicturesShown.Add((picture, caption));
 }

@@ -32,7 +32,7 @@
                         <views:SubscribeButtonView Margin="8,0,0,0" DataContext="{Binding Subscription}" />
                     </WrapPanel>
 
-                    <SelectableTextBlock Classes="title" FontSize="19" Text="{Binding Title}" />
+                    <views:SelectableText Classes="title" FontSize="19" Text="{Binding Title}" />
 
                     <!-- The link is the point of a link post, so it is a control rather than a
                          label: tapping it hands the URL to the browser. -->
@@ -79,7 +79,8 @@
 
                     <md:MarkdownView IsVisible="{Binding HasBody}"
                                      Blocks="{Binding Body}"
-                                     LinkCommand="{Binding OpenMarkdownLinkCommand}" />
+                                     LinkCommand="{Binding OpenMarkdownLinkCommand}"
+                                     Media="{Binding Media}" />
 
                     <StackPanel Orientation="Horizontal" Spacing="14">
                         <views:VoteBarView DataContext="{Binding Votes}" />
@@ -88,6 +89,12 @@
                             <TextBlock Classes="meta" Text="{Binding CommentsLabel}" />
                         </StackPanel>
                         <TextBlock Classes="meta" IsVisible="{Binding IsLocked}" Text="&#x1F512; comments locked" />
+
+                        <Button Classes="link"
+                                IsVisible="{Binding HasBody}"
+                                Command="{Binding CopyBodyCommand}">
+                            <TextBlock Text="{Binding WasCopied, Converter={x:Static vm:CopyLabel.Instance}}" />
+                        </Button>
 
                         <Button Classes="link"
                                 IsVisible="{Binding HasWebAddress}"

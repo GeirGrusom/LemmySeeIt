@@ -54,7 +54,7 @@
     </Style>
 
     <!-- ":is(TextBlock)" rather than "TextBlock": Avalonia's type selector matches the exact
-         type, and post bodies and comments are SelectableTextBlocks. -->
+         type, and post bodies and comments are SelectableText. -->
     <Style Selector=":is(TextBlock).title">
         <Setter Property="Foreground" Value="{DynamicResource PrimaryText}" />
         <Setter Property="FontSize" Value="16" />

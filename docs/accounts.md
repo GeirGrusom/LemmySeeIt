@@ -17,6 +17,43 @@ undone — the token is invalidated server-side, so getting back in means typing
 header shifts as the account name replaces "Sign in", which makes a stray tap easy. One landed
 during testing and ended a live session, which is why it works this way now.
 
+## Which servers to offer
+
+The picker lists servers the reader has used, then a dozen well-known ones they have not. The
+suggestions are baked into the app rather than fetched: the lists that rank Lemmy instances live on
+third-party aggregators, and calling one every time the picker opens would add a dependency on
+somebody else's uptime, tell them the app is running, and leave the picker empty offline — to
+populate a list the reader overwrites as soon as they choose anything. The cost is staleness, which
+is written down where the list is.
+
+Switching signs the reader out, because a token belongs to one server and Lemmy invalidates it
+properly rather than just forgetting it. A tap in a scrolling list is far too little ceremony for
+that, so while signed in the tap asks first and the switch waits for an answer. Signed out there is
+nothing to lose and it happens immediately.
+
+Remembering the servers meant putting an `ImmutableArray` on `AppSettings`, which quietly broke that
+record's equality: a record compares members with the default comparer, and for `ImmutableArray` that
+is reference equality on the array behind it. Two settings holding the same servers would have
+compared unequal, and `AppSettings` is compared with `==` to decide whether a change is worth saving
+and re-applying. It has hand-written `Equals` and `GetHashCode` for that reason.
+
+## Offering to sign up
+
+The API has no field naming a registration page — nothing in `/api/v3/site` points at one. What it
+does carry is `registration_mode`, so the sheet can say whether the instance is **open**, wants an
+**application** an admin will read, or is **closed**, and can withhold the offer entirely in the
+last case. It also reports whether an email address has to be confirmed, which is worth knowing
+before leaving the app rather than after.
+
+The link itself goes to `/signup`, the route Lemmy's own frontend uses. That is a convention rather
+than a contract, and it does not hold everywhere: an instance running a different frontend can
+answer that path with something else — `lemmy.blahaj.zone` serves a "choose your interface" page —
+in which case the reader lands on that server's front door instead of its registration form. Still
+the right server, one click from the right page, and there is nothing better to point at.
+
+When the instance cannot be reached, the offer stays hidden rather than appearing with a guess.
+Silence is better than inviting somebody to register somewhere that has closed.
+
 ## Where the token is kept
 
 The bar is that a token must never sit unencrypted on disk, so that a backup, a disk image or a

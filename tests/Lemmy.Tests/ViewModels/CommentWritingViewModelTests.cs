@@ -48,7 +48,7 @@ internal sealed class CommentWritingViewModelTests
     [Test]
     public void TheAuthorOfACommentMayChangeIt()
     {
-        var comment = new CommentViewModel(Sample.CommentNode(), Now, SignedInApi(), TheAuthor());
+        var comment = new CommentViewModel(Sample.CommentNode(), Now, SignedInApi(), TheAuthor(), Media(), Copier());
 
         Assert.Multiple(() =>
         {
@@ -61,7 +61,7 @@ internal sealed class CommentWritingViewModelTests
     [Test]
     public void SomebodyElsesCommentOffersNoEditOrDelete()
     {
-        var comment = new CommentViewModel(Sample.CommentNode(), Now, SignedInApi(), SomebodyElse());
+        var comment = new CommentViewModel(Sample.CommentNode(), Now, SignedInApi(), SomebodyElse(), Media(), Copier());
 
         Assert.Multiple(() =>
         {
@@ -77,7 +77,7 @@ internal sealed class CommentWritingViewModelTests
         ILemmyApi api = Substitute.For<ILemmyApi>();
         api.IsAuthenticated.Returns(false);
 
-        var comment = new CommentViewModel(Sample.CommentNode(), Now, api, new CurrentAccount());
+        var comment = new CommentViewModel(Sample.CommentNode(), Now, api, new CurrentAccount(), Media(), Copier());
 
         Assert.Multiple(() =>
         {
@@ -93,7 +93,7 @@ internal sealed class CommentWritingViewModelTests
         api.CreateCommentAsync(Arg.Any<PostId>(), Arg.Any<CommentId?>(), Arg.Any<CommentDraft>(), Arg.Any<CancellationToken>())
             .Returns(Sample.CommentNode(id: 201, path: "0.100.201"));
 
-        var comment = new CommentViewModel(Sample.CommentNode(), Now, api, TheAuthor());
+        var comment = new CommentViewModel(Sample.CommentNode(), Now, api, TheAuthor(), Media(), Copier());
         comment.ReplyCommand.Execute(null);
         comment.Composer!.Text = "Quite so.";
         await comment.Composer.SubmitCommand.ExecuteAsync(null);
@@ -113,7 +113,7 @@ internal sealed class CommentWritingViewModelTests
         api.CreateCommentAsync(Arg.Any<PostId>(), Arg.Any<CommentId?>(), Arg.Any<CommentDraft>(), Arg.Any<CancellationToken>())
             .Returns(Sample.CommentNode(id: 201));
 
-        var comment = new CommentViewModel(Sample.CommentNode(id: 100), Now, api, TheAuthor());
+        var comment = new CommentViewModel(Sample.CommentNode(id: 100), Now, api, TheAuthor(), Media(), Copier());
         comment.ReplyCommand.Execute(null);
         comment.Composer!.Text = "Quite so.";
         await comment.Composer.SubmitCommand.ExecuteAsync(null);
@@ -138,7 +138,7 @@ internal sealed class CommentWritingViewModelTests
             .Returns(rewritten);
 
         CommentNode node = Sample.CommentNode(replies: Sample.CommentNode(id: 300, path: "0.100.300"));
-        var comment = new CommentViewModel(node, Now, api, TheAuthor());
+        var comment = new CommentViewModel(node, Now, api, TheAuthor(), Media(), Copier());
 
         comment.EditCommand.Execute(null);
         Assert.That(comment.Composer!.Text, Is.EqualTo("A comment"), "the box starts with what is there");
@@ -163,7 +163,7 @@ internal sealed class CommentWritingViewModelTests
         api.SetCommentDeletedAsync(Arg.Any<CommentId>(), true, Arg.Any<CancellationToken>())
             .Returns(Sample.Comment() with { IsDeleted = true });
 
-        var comment = new CommentViewModel(Sample.CommentNode(), Now, api, TheAuthor());
+        var comment = new CommentViewModel(Sample.CommentNode(), Now, api, TheAuthor(), Media(), Copier());
         await comment.ToggleDeletedCommand.ExecuteAsync(null);
 
         Assert.Multiple(() =>
@@ -186,7 +186,7 @@ internal sealed class CommentWritingViewModelTests
         {
             Comment = Sample.Comment() with { IsDeleted = true },
         };
-        var comment = new CommentViewModel(deleted, Now, api, TheAuthor());
+        var comment = new CommentViewModel(deleted, Now, api, TheAuthor(), Media(), Copier());
 
         Assert.That(comment.CanRestore, Is.True);
         await comment.ToggleDeletedCommand.ExecuteAsync(null);
@@ -205,7 +205,7 @@ internal sealed class CommentWritingViewModelTests
         api.SetCommentDeletedAsync(Arg.Any<CommentId>(), Arg.Any<bool>(), Arg.Any<CancellationToken>())
             .Returns<Comment>(_ => throw new LemmyApiException("Could not reach lemmy.world."));
 
-        var comment = new CommentViewModel(Sample.CommentNode(), Now, api, TheAuthor());
+        var comment = new CommentViewModel(Sample.CommentNode(), Now, api, TheAuthor(), Media(), Copier());
         await comment.ToggleDeletedCommand.ExecuteAsync(null);
 
         Assert.Multiple(() =>
@@ -213,5 +213,16 @@ internal sealed class CommentWritingViewModelTests
             Assert.That(comment.IsDeleted, Is.False);
             Assert.That(comment.ActionError, Is.EqualTo("Could not reach lemmy.world."));
         });
+    }
+
+    /// <summary>Pictures are irrelevant to these; the renderer only needs something to hold.</summary>
+    private static MarkdownMedia Media() => new(Substitute.For<IImageLoader>(), null);
+
+    /// <summary>A clipboard that always accepts.</summary>
+    private static ITextCopier Copier()
+    {
+        ITextCopier copier = Substitute.For<ITextCopier>();
+        copier.CopyAsync(Arg.Any<string?>()).Returns(true);
+        return copier;
     }
 }

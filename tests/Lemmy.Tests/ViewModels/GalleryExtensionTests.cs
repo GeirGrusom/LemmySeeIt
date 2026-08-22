@@ -83,7 +83,7 @@ internal sealed class GalleryExtensionTests
 
         await viewer.ShowNextAsync();
 
-        Assert.That(viewer.Summary.Id, Is.EqualTo(gallery.Images[2].Id));
+        Assert.That(viewer.Summary!.Id, Is.EqualTo(gallery.Images[2].Id));
     }
 
     /// <summary>Nothing to ask for in the middle of the page; the pictures are already there.</summary>

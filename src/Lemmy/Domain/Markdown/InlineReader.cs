@@ -26,7 +26,102 @@ internal static class InlineReader
         var spans = ImmutableArray.CreateBuilder<MarkdownSpan>();
 
         Walk(container, text, spans, MarkdownSpanStyle.None, null);
+        return Finish(text, spans);
+    }
 
+    /// <summary>
+    /// Reads a paragraph as a run of blocks, so that pictures written into it become pictures rather
+    /// than links to pictures. Text on either side of one stays a paragraph of its own.
+    /// </summary>
+    /// <remarks>
+    /// Only pictures at the top level of the paragraph are lifted out. One nested inside emphasis or
+    /// inside a link is left as the alt text it always was: splitting there would mean cutting a
+    /// styled range in half, and an author who writes a picture inside a link means the link.
+    /// </remarks>
+    internal static ImmutableArray<MarkdownBlock> ReadBlocks(ContainerInline? container)
+    {
+        if (container is null)
+        {
+            return [];
+        }
+
+        var blocks = ImmutableArray.CreateBuilder<MarkdownBlock>();
+        var text = new StringBuilder();
+        var spans = ImmutableArray.CreateBuilder<MarkdownSpan>();
+
+        foreach (Inline inline in container)
+        {
+            if (inline is LinkInline { IsImage: true } image
+                && WebLink.TryParse(image.Url.AsSpan(), out WebLink source))
+            {
+                RichText before = TrimLeading(Finish(text, spans));
+                if (!before.IsEmpty)
+                {
+                    blocks.Add(new MarkdownParagraph(before));
+                }
+
+                text.Clear();
+                spans.Clear();
+                blocks.Add(new MarkdownImage(source, ReadAltText(image)));
+                continue;
+            }
+
+            Append(inline, text, spans, MarkdownSpanStyle.None, null);
+        }
+
+        RichText tail = TrimLeading(Finish(text, spans));
+        if (!tail.IsEmpty)
+        {
+            blocks.Add(new MarkdownParagraph(tail));
+        }
+
+        return blocks.ToImmutable();
+    }
+
+    /// <summary>
+    /// Drops leading whitespace, moving the styled ranges with it. Splitting a paragraph around a
+    /// picture leaves the space that separated them at the front of what follows.
+    /// </summary>
+    private static RichText TrimLeading(RichText content)
+    {
+        int offset = 0;
+        while (offset < content.Text.Length && char.IsWhiteSpace(content.Text[offset]))
+        {
+            offset++;
+        }
+
+        if (offset == 0)
+        {
+            return content;
+        }
+
+        string trimmed = content.Text[offset..];
+        var moved = ImmutableArray.CreateBuilder<MarkdownSpan>(content.Spans.Length);
+
+        foreach (MarkdownSpan span in content.Spans)
+        {
+            int start = span.Start - offset;
+            int length = span.Length;
+
+            // A range that began inside the whitespace keeps only the part that survived it.
+            if (start < 0)
+            {
+                length += start;
+                start = 0;
+            }
+
+            if (length > 0 && start < trimmed.Length)
+            {
+                moved.Add(span with { Start = start, Length = Math.Min(length, trimmed.Length - start) });
+            }
+        }
+
+        return new RichText(trimmed, moved.ToImmutable());
+    }
+
+    /// <summary>Turns the accumulated text and ranges into a paragraph's content.</summary>
+    private static RichText Finish(StringBuilder text, ImmutableArray<MarkdownSpan>.Builder spans)
+    {
         string result = text.ToString().TrimEnd();
         if (result.Length == 0)
         {
@@ -133,7 +228,11 @@ internal static class InlineReader
         Emit(label, text, spans, style, target);
     }
 
-    private static string DescribeImage(LinkInline image)
+    /// <summary>
+    /// The alt text an image was written with, for a picture block. Empty when the author gave
+    /// none — what to call a nameless picture is the renderer's business, not the parser's.
+    /// </summary>
+    private static string ReadAltText(LinkInline image)
     {
         var alt = new StringBuilder();
         foreach (Inline child in image)
@@ -144,7 +243,16 @@ internal static class InlineReader
             }
         }
 
-        string described = alt.ToString().Trim();
+        return alt.ToString().Trim();
+    }
+
+    /// <summary>
+    /// What to show in place of an image left as text — one nested inside a link. Unlike a picture
+    /// block this has to say something, because it is the only thing there is to press.
+    /// </summary>
+    private static string DescribeImage(LinkInline image)
+    {
+        string described = ReadAltText(image);
 
         return described.Length > 0 ? described : "image";
     }

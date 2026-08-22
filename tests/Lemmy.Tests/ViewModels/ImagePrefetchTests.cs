@@ -83,7 +83,7 @@ internal sealed class ImagePrefetchTests
         {
             Assert.That(viewer.IsLoading, Is.False);
             Assert.That(viewer.Image, Is.Not.Null);
-            Assert.That(viewer.Summary.Id, Is.EqualTo(pictures[1].Id));
+            Assert.That(viewer.Summary!.Id, Is.EqualTo(pictures[1].Id));
         });
     }
 

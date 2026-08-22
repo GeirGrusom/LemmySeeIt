@@ -38,6 +38,9 @@ public sealed partial class ImageViewerView : UserControl
     private static readonly TimeSpan FrameTick = TimeSpan.FromMilliseconds(20);
 
     private readonly Panel? surface;
+
+    /// <summary>The cumulative pinch scale as of the previous event, to turn it into a delta.</summary>
+    private double pinchScale = 1;
     private readonly Image? picture;
     private readonly DispatcherTimer closeTimer;
     private readonly DispatcherTimer animationTimer;
@@ -207,21 +210,40 @@ public sealed partial class ImageViewerView : UserControl
         };
     }
 
+    /// <summary>
+    /// Zooms with the pinch.
+    /// </summary>
+    /// <remarks>
+    /// Two things about <see cref="PinchEventArgs"/> are easy to get wrong, and both were.
+    /// <see cref="PinchEventArgs.Scale"/> is the distance between the fingers over their distance
+    /// when the gesture began — cumulative, not a per-event delta — so feeding it straight to a
+    /// relative zoom compounds it and the picture slams to maximum on the first pinch. And
+    /// <see cref="PinchEventArgs.ScaleOrigin"/> is already in pixels in this control's coordinates;
+    /// scaling it by the viewport size threw the origin far off the bottom-right, which is where
+    /// the clamp then pinned the picture.
+    /// </remarks>
     private void OnPinch(object? sender, PinchEventArgs e)
     {
-        if (ViewModel is not { } model)
+        if (ViewModel is not { } model || surface is null)
         {
             return;
         }
 
-        // ScaleOrigin is a fraction of the control; the geometry works in pixels.
-        var origin = new Point(e.ScaleOrigin.X * Viewport.Width, e.ScaleOrigin.Y * Viewport.Height);
+        double factor = pinchScale > 0 && e.Scale > 0 ? e.Scale / pinchScale : 1;
+        pinchScale = e.Scale;
 
-        Update(model.Zoom.ScaledBy(e.Scale, origin, Viewport, FittedSize()));
+        Point origin = this.TranslatePoint(e.ScaleOrigin, surface) ?? e.ScaleOrigin;
+
+        Update(model.Zoom.ScaledBy(factor, origin, Viewport, FittedSize()));
         e.Handled = true;
     }
 
-    private void OnPinchEnded(object? sender, PinchEndedEventArgs e) => Clamp();
+    private void OnPinchEnded(object? sender, PinchEndedEventArgs e)
+    {
+        // The next gesture measures from its own starting distance again.
+        pinchScale = 1;
+        Clamp();
+    }
 
     /// <inheritdoc />
     protected override void OnDoubleTapped(TappedEventArgs e)

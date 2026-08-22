@@ -19,6 +19,8 @@ public sealed partial class CommentViewModel : ViewModelBase
 {
     private readonly ILemmyApi api;
     private readonly CurrentAccount account;
+    private readonly MarkdownMedia media;
+    private readonly ITextCopier copier;
     private readonly DateTimeOffset now;
     private readonly ICommand? linkCommand;
 
@@ -26,6 +28,7 @@ public sealed partial class CommentViewModel : ViewModelBase
     /// <param name="node">The comment and its replies.</param>
     /// <param name="now">The current time, for the age label.</param>
     /// <param name="api">The client this comment and its replies vote through.</param>
+    /// <param name="media">How pictures written into the comment are fetched and opened.</param>
     /// <param name="linkCommand">
     /// Opens a link pressed inside the comment. Passed down the tree rather than resolved per
     /// comment: a thread is hundreds of these, and they all open links the same way.
@@ -35,17 +38,24 @@ public sealed partial class CommentViewModel : ViewModelBase
         DateTimeOffset now,
         ILemmyApi api,
         CurrentAccount account,
+        MarkdownMedia media,
+        ITextCopier copier,
         ICommand? linkCommand = null)
     {
         ArgumentNullException.ThrowIfNull(node);
         ArgumentNullException.ThrowIfNull(api);
         ArgumentNullException.ThrowIfNull(account);
+        ArgumentNullException.ThrowIfNull(media);
+        ArgumentNullException.ThrowIfNull(copier);
 
         this.api = api;
         this.account = account;
+        this.media = media;
+        this.copier = copier;
         this.now = now;
         this.linkCommand = linkCommand;
 
+        Media = media;
         Node = node;
         LinkCommand = linkCommand;
         AgeLabel = RelativeTime.Format(node.Comment.Published, now);
@@ -56,7 +66,7 @@ public sealed partial class CommentViewModel : ViewModelBase
             (vote, token) => api.VoteOnCommentAsync(node.Comment.Id, vote, token));
 
         Replies = new ObservableCollection<CommentViewModel>(
-            node.Replies.Select(reply => new CommentViewModel(reply, now, api, account, linkCommand)));
+            node.Replies.Select(reply => new CommentViewModel(reply, now, api, account, media, copier, linkCommand)));
     }
 
     /// <summary>The comment and its replies.</summary>
@@ -73,6 +83,9 @@ public sealed partial class CommentViewModel : ViewModelBase
 
     /// <summary>Opens a link pressed inside this comment.</summary>
     public ICommand? LinkCommand { get; }
+
+    /// <summary>How pictures written into this comment are fetched and opened.</summary>
+    public MarkdownMedia Media { get; }
 
     /// <summary>The author's display name.</summary>
     public string AuthorLabel => Node.Creator.PreferredName;
@@ -141,6 +154,21 @@ public sealed partial class CommentViewModel : ViewModelBase
     [ObservableProperty]
     private bool isAmending;
 
+    /// <summary>
+    /// Copies what the author wrote — the Markdown itself, not the rendered text, because that is
+    /// what can be pasted back into a reply and still mean the same thing.
+    /// </summary>
+    [RelayCommand]
+    private async Task CopyAsync() =>
+        WasCopied = await copier.CopyAsync(Node.Comment.Content.Value).ConfigureAwait(true);
+
+    /// <summary>Set once a copy succeeds, so the button can say it worked.</summary>
+    [ObservableProperty]
+    private bool wasCopied;
+
+    /// <summary>Whether there is anything to copy; a deleted comment has nothing.</summary>
+    public bool CanCopy => !Node.Comment.Content.IsEmpty && !IsDeleted;
+
     /// <summary>Opens a box to reply to this comment.</summary>
     [RelayCommand]
     private void Reply() =>
@@ -196,7 +224,7 @@ public sealed partial class CommentViewModel : ViewModelBase
 
         // Newest first, and at the top where it can be seen: the thread's sort is the server's
         // opinion of a comment that did not exist when it was asked.
-        Replies.Insert(0, new CommentViewModel(reply, now, api, account, linkCommand));
+        Replies.Insert(0, new CommentViewModel(reply, now, api, account, media, copier, linkCommand));
 
         IsCollapsed = false;
         OnPropertyChanged(nameof(HasReplies));
@@ -228,5 +256,6 @@ public sealed partial class CommentViewModel : ViewModelBase
         OnPropertyChanged(nameof(CanRestore));
         OnPropertyChanged(nameof(CanReply));
         OnPropertyChanged(nameof(WasEdited));
+        OnPropertyChanged(nameof(CanCopy));
     }
 }

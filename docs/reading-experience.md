@@ -28,6 +28,20 @@ measure, correct — and only ever moves the offset directly, because `ScrollInt
 scroll rather than applying it and mixing the two makes each correction land on a jump that has not
 happened yet.
 
+## Pinching to zoom
+
+Two things about Avalonia's pinch gesture are easy to read wrongly, and both were. `Scale` is the
+distance between the fingers over their distance when the gesture started — one number that grows
+through the gesture, not a per-event delta — so passing it straight to a relative zoom multiplied it
+by itself on every event and the picture slammed to maximum on the first pinch. And `ScaleOrigin` is
+already in pixels in the target's coordinates; multiplying it by the viewport size, as though it
+were a fraction, threw the origin thousands of pixels past the corner, and the edge clamp then
+pinned the picture so that its bottom-right corner filled the screen.
+
+The geometry in `ZoomState` was right throughout. Both bugs were in reading the gesture, which is an
+argument for the split: the part that is hard to get right is testable without a finger on a screen,
+and the part that needed a device was small enough to inspect once the symptoms named it.
+
 ## Voting happens before the server agrees
 
 The arrows and the score are one small view model shared by the feed row, the post header and every
@@ -93,6 +107,22 @@ A comment shows Edit and Delete only to the account that wrote it, matched by pe
 restored while offline knows its own name but not its id, and an unknown id owns nothing — better to
 withhold the buttons from the rightful owner for one launch than to offer them on somebody else's
 comment.
+
+## Selecting text, and not selecting it
+
+Avalonia reports a touch contact as a pressed left button, so `SelectableTextBlock` treats the start
+of a scroll as the start of a selection: dragging a thread left a line highlighted behind it. And
+none of what makes a selection worth having exists on a phone — no drag handles to adjust it, no
+long-press menu to copy it — so the reader got the cost without the feature.
+
+`SelectableText` ignores touch for selection purposes and leaves the events unhandled, which is what
+lets the surrounding scroll gesture carry on. The check is on the pointer rather than the platform,
+so a touchscreen laptop still selects with its mouse and scrolls with a finger.
+
+That leaves copying, which a finger then cannot do at all, so post bodies and comments carry a Copy
+button. It copies the Markdown the author wrote rather than the rendered text, because that is what
+can be pasted back into a reply and still mean the same thing. The button says "Copied" afterwards:
+the clipboard gives no feedback of its own, and a button that appears to do nothing reads as broken.
 
 ## Links go to the browser
 

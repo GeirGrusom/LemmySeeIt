@@ -1,3 +1,5 @@
+using Lemmy.Domain;
+
 namespace Lemmy.Domain.Models;
 
 /// <summary>The identity of an instance, as shown when picking or confirming a server.</summary>
@@ -10,6 +12,9 @@ namespace Lemmy.Domain.Models;
 /// <param name="SoftwareVersion">The Lemmy version it runs, which decides what the API supports.</param>
 /// <param name="Users">Registered accounts.</param>
 /// <param name="Communities">Communities hosted locally.</param>
+/// <param name="Registration">Whether it is taking new accounts, and on what terms.</param>
+/// <param name="ApplicationQuestion">What it asks applicants, when it asks anything.</param>
+/// <param name="RequiresEmailVerification">Whether a new account must confirm an email address.</param>
 public sealed record SiteSummary(
     InstanceAddress Address,
     string Name,
@@ -19,4 +24,7 @@ public sealed record SiteSummary(
     WebLink? Banner,
     string? SoftwareVersion,
     VoteCount Users,
-    VoteCount Communities);
+    VoteCount Communities,
+    RegistrationMode Registration = RegistrationMode.Unknown,
+    MarkdownText ApplicationQuestion = default,
+    bool RequiresEmailVerification = false);

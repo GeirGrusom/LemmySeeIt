@@ -121,7 +121,7 @@ internal sealed class CommentViewModelTests
             1, "0.1", 2,
             Sample.CommentNode(2, "0.1.2", 1, Sample.CommentNode(3, "0.1.2.3")));
 
-        var viewModel = new CommentViewModel(node, Now, AnonymousApi(), new CurrentAccount());
+        var viewModel = new CommentViewModel(node, Now, AnonymousApi(), new CurrentAccount(), Media(), Copier());
 
         Assert.Multiple(() =>
         {
@@ -135,7 +135,7 @@ internal sealed class CommentViewModelTests
     [Test]
     public void CollapsingFlipsTheGlyphAsWellAsTheState()
     {
-        var viewModel = new CommentViewModel(Sample.CommentNode(), Now, AnonymousApi(), new CurrentAccount());
+        var viewModel = new CommentViewModel(Sample.CommentNode(), Now, AnonymousApi(), new CurrentAccount(), Media(), Copier());
 
         Assert.That(viewModel.ToggleLabel, Is.EqualTo("−"));
 
@@ -152,7 +152,7 @@ internal sealed class CommentViewModelTests
     [TestCase(12, "12 more replies")]
     public void UnloadedRepliesReadNaturally(int childCount, string expected)
     {
-        var viewModel = new CommentViewModel(Sample.CommentNode(1, "0.1", childCount), Now, AnonymousApi(), new CurrentAccount());
+        var viewModel = new CommentViewModel(Sample.CommentNode(1, "0.1", childCount), Now, AnonymousApi(), new CurrentAccount(), Media(), Copier());
 
         Assert.Multiple(() =>
         {
@@ -183,5 +183,16 @@ internal sealed class CommentViewModelTests
         ILemmyApi api = Substitute.For<ILemmyApi>();
         api.IsAuthenticated.Returns(false);
         return api;
+    }
+
+    /// <summary>Pictures are irrelevant to these; the renderer only needs something to hold.</summary>
+    private static MarkdownMedia Media() => new(Substitute.For<IImageLoader>(), null);
+
+    /// <summary>A clipboard that always accepts.</summary>
+    private static ITextCopier Copier()
+    {
+        ITextCopier copier = Substitute.For<ITextCopier>();
+        copier.CopyAsync(Arg.Any<string?>()).Returns(true);
+        return copier;
     }
 }

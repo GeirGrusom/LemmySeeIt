@@ -122,6 +122,48 @@
                                IsVisible="{Binding InstanceError, Converter={x:Static ObjectConverters.IsNotNull}}"
                                Text="{Binding InstanceError}" />
 
+                    <!-- The question a tap raises while signed in, answered before anything moves. -->
+                    <StackPanel Spacing="6" IsVisible="{Binding HasPendingInstance}">
+                        <TextBlock Classes="meta"
+                                   TextWrapping="Wrap"
+                                   Foreground="{DynamicResource NegativeText}"
+                                   Text="{Binding PendingInstanceWarning}" />
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <Button Content="Switch and sign out" Classes="accent" Command="{Binding ConfirmInstanceCommand}" />
+                            <Button Content="Stay" Command="{Binding CancelInstanceChangeCommand}" />
+                        </StackPanel>
+                    </StackPanel>
+
+                    <!-- Servers already used, then the ones the app shipped knowing about. Scrolls
+                         so the rest of the sheet stays reachable on a short screen. -->
+                    <ScrollViewer MaxHeight="210" HorizontalScrollBarVisibility="Disabled">
+                        <ItemsControl ItemsSource="{Binding InstanceChoices}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:InstanceChoice">
+                                    <Button Classes="card"
+                                            Margin="0,0,0,4"
+                                            Padding="10,7"
+                                            Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).ChooseInstanceCommand}"
+                                            CommandParameter="{Binding}">
+                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                            <TextBlock Text="{Binding Label}" VerticalAlignment="Center" />
+                                            <!-- Where it came from matters only for the ones you are
+                                                 not already on; "current" says enough by itself. -->
+                                            <Border Classes="chip" VerticalAlignment="Center" IsVisible="{Binding !IsCurrent}">
+                                                <TextBlock Classes="badge" Text="{Binding OriginLabel}" />
+                                            </Border>
+                                            <TextBlock Classes="meta"
+                                                       VerticalAlignment="Center"
+                                                       Foreground="{DynamicResource PositiveText}"
+                                                       IsVisible="{Binding IsCurrent}"
+                                                       Text="&#x2713; current" />
+                                        </StackPanel>
+                                    </Button>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+
                     <Border Height="1" Margin="0,4" Background="{DynamicResource DividerBrush}" />
 
                     <!-- Applies immediately: it changes what the server is asked for, so the feed
@@ -209,6 +251,18 @@
                                TextWrapping="Wrap"
                                IsVisible="{Binding SignInError, Converter={x:Static ObjectConverters.IsNotNull}}"
                                Text="{Binding SignInError}" />
+
+                    <!-- Only appears once the instance has said it takes new accounts. -->
+                    <StackPanel Spacing="2"
+                                IsVisible="{Binding SignUpNote, Converter={x:Static ObjectConverters.IsNotNull}}">
+                        <Border Height="1" Margin="0,4" Background="{DynamicResource DividerBrush}" />
+                        <TextBlock Classes="meta" TextWrapping="Wrap" Text="{Binding SignUpNote}" />
+                        <Button Classes="link"
+                                HorizontalAlignment="Left"
+                                IsVisible="{Binding CanSignUp}"
+                                Content="Create an account in your browser"
+                                Command="{Binding SignUpCommand}" />
+                    </StackPanel>
 
                     <!-- Says plainly what happens to the session on this device. -->
                     <TextBlock Classes="meta"

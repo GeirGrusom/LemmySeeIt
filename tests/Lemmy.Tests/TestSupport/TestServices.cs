@@ -44,13 +44,17 @@ internal sealed class TestServices
         Clock = FixedTimeProvider.AtReference();
         Subscriptions = new SubscriptionTracker();
         Account = new CurrentAccount();
+        Copier = Substitute.For<ITextCopier>();
+        Copier.CopyAsync(Arg.Any<string?>()).Returns(true);
         Services = new AppServices(
-            ApiFactory, ImageLoader, SettingsStore, LinkOpener, SessionStore, Clock, Subscriptions, Account);
+            ApiFactory, ImageLoader, SettingsStore, LinkOpener, SessionStore, Clock, Subscriptions, Account, Copier);
     }
 
     internal SubscriptionTracker Subscriptions { get; }
 
     internal CurrentAccount Account { get; }
+
+    internal ITextCopier Copier { get; }
 
     internal ILemmyApi Api { get; }
 

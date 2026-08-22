@@ -79,7 +79,7 @@ internal sealed class ImageGalleryTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(viewer.Summary.Id, Is.EqualTo(pictures[1].Id));
+            Assert.That(viewer.Summary!.Id, Is.EqualTo(pictures[1].Id));
             Assert.That(viewer.Title, Is.EqualTo("Picture 1"));
             Assert.That(viewer.PositionLabel, Is.EqualTo("2 / 3"));
         });
@@ -94,7 +94,7 @@ internal sealed class ImageGalleryTests
 
         await viewer.ShowPreviousAsync();
 
-        Assert.That(viewer.Summary.Id, Is.EqualTo(pictures[1].Id));
+        Assert.That(viewer.Summary!.Id, Is.EqualTo(pictures[1].Id));
     }
 
     [Test]
@@ -250,7 +250,7 @@ internal sealed class ImageGalleryTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(viewer.Summary.Id, Is.EqualTo(pictures[1].Id));
+            Assert.That(viewer.Summary!.Id, Is.EqualTo(pictures[1].Id));
             Assert.That(viewer.IsLoading, Is.False, "the stale load must not reinstate a spinner");
         });
     }

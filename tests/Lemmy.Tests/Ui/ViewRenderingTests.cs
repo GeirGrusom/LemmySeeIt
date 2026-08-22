@@ -902,4 +902,26 @@ internal sealed class ViewRenderingTests
 
         Assert.That(directory.HasNoCommunities, Is.False);
     }
+
+
+
+    [AvaloniaTest]
+    public void TheServerPickerRendersItsList()
+    {
+        var services = new TestServices();
+        using var shell = new MainViewModel(services.Services, AppSettings.Default);
+        shell.ToggleInstancePickerCommand.Execute(null);
+
+        Window window = Show(new MainView(), shell);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(VisibleText(window), Does.Contain("lemmy.ml"));
+            Assert.That(VisibleText(window), Does.Contain("suggested"));
+        });
+    }
+
+
+
+
 }

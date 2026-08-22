@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -223,6 +224,22 @@ public sealed partial class MainViewModel : ViewModelBase, INavigator, IDisposab
         _ = viewer.LoadAsync();
     }
 
+    /// <inheritdoc />
+    public void ShowPicture(WebLink picture, string caption)
+    {
+        if (!picture.IsValid)
+        {
+            return;
+        }
+
+        CloseImage();
+
+        var viewer = new ImageViewerViewModel(picture, caption, services.ImageLoader, CloseImage);
+        ImageViewer = viewer;
+
+        _ = viewer.LoadAsync();
+    }
+
     /// <summary>Dismisses the full-screen image, releasing the bitmap with it.</summary>
     public void CloseImage()
     {
@@ -319,6 +336,77 @@ public sealed partial class MainViewModel : ViewModelBase, INavigator, IDisposab
         SignInPassword = string.Empty;
         SignInTotp = string.Empty;
         IsSignInOpen = true;
+
+        // Not awaited: the sheet is usable without it, and whether the instance takes new accounts
+        // is worth a round trip only for somebody who has not got one.
+        _ = DescribeRegistrationAsync();
+    }
+
+    /// <summary>
+    /// Whether to offer signing up. Hidden until the instance has been asked, so the sheet never
+    /// invites somebody to register somewhere that has closed its doors.
+    /// </summary>
+    [ObservableProperty]
+    private bool canSignUp;
+
+    /// <summary>What the instance's terms are, in one line.</summary>
+    [ObservableProperty]
+    private string? signUpNote;
+
+    /// <summary>
+    /// Asks the instance whether it is taking new accounts. A failure leaves the offer hidden: not
+    /// knowing is a reason to say nothing, not a reason to guess.
+    /// </summary>
+    private async Task DescribeRegistrationAsync()
+    {
+        CanSignUp = false;
+        SignUpNote = null;
+
+        try
+        {
+            SiteSummary site = await api.GetSiteAsync().ConfigureAwait(true);
+
+            if (!IsSignInOpen)
+            {
+                return;
+            }
+
+            CanSignUp = site.Registration.AcceptsNewAccounts();
+            SignUpNote = site.Registration switch
+            {
+                RegistrationMode.Open when site.RequiresEmailVerification =>
+                    $"{site.Address.Value} is open to new accounts and will want an email address confirmed.",
+                RegistrationMode.Open => $"{site.Address.Value} is open to new accounts.",
+                RegistrationMode.RequireApplication =>
+                    $"{site.Address.Value} accepts new accounts, but an admin has to approve each one first.",
+                RegistrationMode.Closed => $"{site.Address.Value} is not taking new accounts.",
+                _ => null,
+            };
+        }
+        catch (LemmyApiException)
+        {
+            // Could not ask. Say nothing rather than send somebody to a door that may be shut.
+        }
+    }
+
+    /// <summary>
+    /// Opens the instance's own sign-up page in a browser. Account creation deliberately happens
+    /// there rather than here: it can involve a captcha, an application to write and an email to
+    /// confirm, and the server is the only thing that knows which.
+    /// </summary>
+    /// <remarks>
+    /// <c>/signup</c> is the route Lemmy's own frontend uses and the API offers nothing better —
+    /// there is no field anywhere in <c>/api/v3/site</c> that names a registration page. It is right
+    /// for the great majority of instances; one running a different frontend may land the reader on
+    /// its front page instead, which is still the right server to be looking at.
+    /// </remarks>
+    [RelayCommand]
+    private async Task SignUpAsync()
+    {
+        if (WebLink.TryParse(new Uri(settings.Instance.BaseUri, "signup").ToString().AsSpan(), out WebLink link))
+        {
+            await services.LinkOpener.OpenAsync(link).ConfigureAwait(true);
+        }
     }
 
     /// <summary>Closes the account sheet without changing anything.</summary>
@@ -474,7 +562,105 @@ public sealed partial class MainViewModel : ViewModelBase, INavigator, IDisposab
         IsInstancePickerOpen = !IsInstancePickerOpen;
         InstanceError = null;
         InstanceInput = InstanceLabel;
+        PendingInstance = null;
+        RefreshInstanceChoices();
     }
+
+    /// <summary>
+    /// The servers on offer: the ones the reader has used, then the suggestions they have not.
+    /// </summary>
+    [ObservableProperty]
+    private ImmutableArray<InstanceChoice> instanceChoices = [];
+
+    private void RefreshInstanceChoices()
+    {
+        ImmutableArray<InstanceChoice>.Builder choices = ImmutableArray.CreateBuilder<InstanceChoice>();
+        HashSet<InstanceAddress> seen = [];
+
+        foreach (InstanceAddress address in settings.Recent)
+        {
+            if (seen.Add(address))
+            {
+                choices.Add(new InstanceChoice(address, address == settings.Instance, IsRemembered: true));
+            }
+        }
+
+        // The current server always appears, even on a first run with nothing remembered yet.
+        if (seen.Add(settings.Instance))
+        {
+            choices.Insert(0, new InstanceChoice(settings.Instance, IsCurrent: true, IsRemembered: true));
+        }
+
+        foreach (InstanceAddress address in KnownInstances.Suggested)
+        {
+            if (seen.Add(address))
+            {
+                choices.Add(new InstanceChoice(address, IsCurrent: false, IsRemembered: false));
+            }
+        }
+
+        InstanceChoices = choices.ToImmutable();
+    }
+
+    /// <summary>
+    /// A server tapped in the list that has not been switched to yet, or <see langword="null"/>.
+    /// </summary>
+    /// <remarks>
+    /// A token belongs to one server, so moving signs the reader out of the one they are on — and
+    /// getting back in means a password, because Lemmy invalidates the token server-side. That is
+    /// too much to hang on a single tap in a scrolling list, so while signed in the tap asks first.
+    /// Signed out there is nothing to lose and the switch happens immediately.
+    /// </remarks>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasPendingInstance))]
+    [NotifyPropertyChangedFor(nameof(PendingInstanceWarning))]
+    private InstanceChoice? pendingInstance;
+
+    /// <summary>Whether a switch is waiting to be confirmed.</summary>
+    public bool HasPendingInstance => PendingInstance is not null;
+
+    /// <summary>What that switch will cost.</summary>
+    public string PendingInstanceWarning => PendingInstance is { } choice
+        ? $"Switch to {choice.Label}? That signs you out of {InstanceLabel}, and signing back in needs your password."
+        : string.Empty;
+
+    /// <summary>Switches to a server picked from the list, asking first when there is a session to lose.</summary>
+    [RelayCommand]
+    private async Task ChooseInstanceAsync(InstanceChoice choice)
+    {
+        if (choice.IsCurrent)
+        {
+            IsInstancePickerOpen = false;
+            return;
+        }
+
+        if (IsSignedIn)
+        {
+            PendingInstance = choice;
+            return;
+        }
+
+        InstanceInput = choice.Address.Value;
+        await ApplyInstanceAsync().ConfigureAwait(true);
+    }
+
+    /// <summary>Goes ahead with a switch the reader has confirmed.</summary>
+    [RelayCommand]
+    private async Task ConfirmInstanceAsync()
+    {
+        if (PendingInstance is not { } choice)
+        {
+            return;
+        }
+
+        PendingInstance = null;
+        InstanceInput = choice.Address.Value;
+        await ApplyInstanceAsync().ConfigureAwait(true);
+    }
+
+    /// <summary>Abandons a switch without touching the session.</summary>
+    [RelayCommand]
+    private void CancelInstanceChange() => PendingInstance = null;
 
     /// <summary>
     /// Points the app at a different server. Everything loaded so far is instance-local, so every
@@ -503,8 +689,9 @@ public sealed partial class MainViewModel : ViewModelBase, INavigator, IDisposab
             await SignOutOfCurrentInstanceAsync().ConfigureAwait(true);
         }
 
-        settings = settings with { Instance = address };
+        settings = settings.WithInstance(address);
         ApplyInstance(address);
+        RefreshInstanceChoices();
         IsInstancePickerOpen = false;
 
         await services.SettingsStore.SaveAsync(settings).ConfigureAwait(true);
