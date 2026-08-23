@@ -85,16 +85,12 @@ public sealed partial class MainViewModel : ViewModelBase, INavigator, IDisposab
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsSignedIn))]
     [NotifyPropertyChangedFor(nameof(AccountLabel))]
-    [NotifyPropertyChangedFor(nameof(AccountQualifiedName))]
     private Account? account;
 
     /// <summary>Whether the sign-in sheet is open.</summary>
     [ObservableProperty]
     private bool isSignInOpen;
 
-    /// <summary>Whether the account sheet is open.</summary>
-    [ObservableProperty]
-    private bool isAccountOpen;
 
     /// <summary>What the reader typed as their account name or email.</summary>
     [ObservableProperty]
@@ -134,8 +130,6 @@ public sealed partial class MainViewModel : ViewModelBase, INavigator, IDisposab
     /// <summary>The account name for the header, or an invitation to sign in.</summary>
     public string AccountLabel => Account?.PreferredName ?? "Sign in";
 
-    /// <summary>The unambiguous account name, for the account sheet.</summary>
-    public string AccountQualifiedName => Account?.QualifiedName ?? string.Empty;
 
     /// <summary>Whether there is a page to go back to.</summary>
     public bool CanPop => backStack.Count > 0;
@@ -326,9 +320,9 @@ public sealed partial class MainViewModel : ViewModelBase, INavigator, IDisposab
     [RelayCommand]
     private void ToggleAccount()
     {
-        if (IsSignedIn)
+        if (Account is { } signedIn)
         {
-            IsAccountOpen = true;
+            ShowProfile(signedIn.Id);
             return;
         }
 
@@ -409,16 +403,22 @@ public sealed partial class MainViewModel : ViewModelBase, INavigator, IDisposab
         }
     }
 
-    /// <summary>Closes the account sheet without changing anything.</summary>
-    [RelayCommand]
-    private void CloseAccount() => IsAccountOpen = false;
-
-    /// <summary>Signs out, from the account sheet where it has been asked for explicitly.</summary>
-    [RelayCommand]
-    private async Task ConfirmSignOutAsync()
+    /// <inheritdoc />
+    /// <remarks>
+    /// Signing out lives on this page rather than in the header, whose layout shifts as the account
+    /// name replaces "Sign in" — a stray tap once ended a live session. It is offered only on the
+    /// reader's own page, which is decided here rather than by whichever byline was tapped.
+    /// </remarks>
+    public void ShowProfile(PersonId person)
     {
-        IsAccountOpen = false;
-        await SignOutAsync().ConfigureAwait(true);
+        if (!person.IsValid)
+        {
+            return;
+        }
+
+        Func<Task>? signOut = Account?.Id == person ? SignOutAsync : null;
+
+        Push(new ProfileViewModel(services, this, api, settings, person, signOut));
     }
 
     /// <summary>Closes the sign-in sheet without signing in.</summary>

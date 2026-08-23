@@ -170,8 +170,8 @@ internal sealed class ShellSessionTests
 
         Assert.Multiple(async () =>
         {
-            Assert.That(shell.IsSignedIn, Is.True, "it opens the account sheet instead");
-            Assert.That(shell.IsAccountOpen, Is.True);
+            Assert.That(shell.IsSignedIn, Is.True, "it opens the account's page instead");
+            Assert.That(shell.CurrentPage, Is.TypeOf<ProfileViewModel>());
             await services.Api.DidNotReceive().LogOutAsync(Arg.Any<CancellationToken>());
         });
     }
@@ -187,18 +187,18 @@ internal sealed class ShellSessionTests
         await shell.SignInCommand.ExecuteAsync(null);
         shell.ToggleAccountCommand.Execute(null);
 
-        await shell.ConfirmSignOutCommand.ExecuteAsync(null);
+        var profile = (ProfileViewModel)shell.CurrentPage!;
+        await profile.SignOutCommand.ExecuteAsync(null);
 
         Assert.Multiple(async () =>
         {
             Assert.That(shell.IsSignedIn, Is.False);
-            Assert.That(shell.IsAccountOpen, Is.False);
             await services.Api.Received().LogOutAsync(Arg.Any<CancellationToken>());
         });
     }
 
     [Test]
-    public async Task ClosingTheAccountSheetChangesNothing()
+    public async Task LeavingTheAccountPageChangesNothing()
     {
         SignInSucceeds();
         using MainViewModel shell = CreateShell();
@@ -208,11 +208,11 @@ internal sealed class ShellSessionTests
         await shell.SignInCommand.ExecuteAsync(null);
         shell.ToggleAccountCommand.Execute(null);
 
-        shell.CloseAccountCommand.Execute(null);
+        shell.Pop();
 
         Assert.Multiple(() =>
         {
-            Assert.That(shell.IsAccountOpen, Is.False);
+            Assert.That(shell.CurrentPage, Is.Not.TypeOf<ProfileViewModel>());
             Assert.That(shell.IsSignedIn, Is.True);
         });
     }

@@ -173,7 +173,7 @@ public sealed partial class PostDetailViewModel : PageViewModel
         DateTimeOffset now = Services.Now;
         foreach (CommentNode root in thread.Roots)
         {
-            Comments.Add(new CommentViewModel(root, now, api, Services.Account, Media, Services.Copier, OpenMarkdownLinkCommand));
+            Comments.Add(new CommentViewModel(root, now, api, Services.Account, Media, Services.Copier, Navigator, OpenMarkdownLinkCommand));
         }
 
         HasNoComments = Comments.Count == 0;
@@ -230,6 +230,10 @@ public sealed partial class PostDetailViewModel : PageViewModel
         Image = await Services.ImageLoader.LoadAsync(link, ImageDecodeWidth, Lifetime).ConfigureAwait(true);
     }
 
+    /// <summary>Opens the author's page.</summary>
+    [RelayCommand]
+    private void OpenAuthor() => Navigator.ShowProfile(Summary.Creator.Id);
+
     /// <summary>Copies the post's body as the Markdown it was written in.</summary>
     [RelayCommand]
     private async Task CopyBodyAsync() =>
@@ -251,7 +255,7 @@ public sealed partial class PostDetailViewModel : PageViewModel
 
         // At the top, whatever the thread is sorted by: the sort is the server's answer to a
         // question asked before this comment existed.
-        Comments.Insert(0, new CommentViewModel(posted, Services.Now, api, Services.Account, Media, Services.Copier, OpenMarkdownLinkCommand));
+        Comments.Insert(0, new CommentViewModel(posted, Services.Now, api, Services.Account, Media, Services.Copier, Navigator, OpenMarkdownLinkCommand));
         HasNoComments = false;
     }
 

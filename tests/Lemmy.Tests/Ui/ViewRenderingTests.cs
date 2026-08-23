@@ -921,7 +921,64 @@ internal sealed class ViewRenderingTests
         });
     }
 
+    [AvaloniaTest]
+    public async Task TheProfilePageDrawsWhoTheAccountIs()
+    {
+        var services = new TestServices();
+        using var page = new ProfileViewModel(
+            services.Services, new RecordingNavigator(), services.Api, AppSettings.Default, new PersonId(1));
+        await page.LoadAsync();
 
+        Window window = Show(new ProfileView(), page);
 
+        Assert.Multiple(() =>
+        {
+            Assert.That(VisibleText(window), Does.Contain("alice"));
+            Assert.That(
+                VisibleText(window).Any(text => text.Contains("Reads more than posts", StringComparison.Ordinal)),
+                Is.True,
+                "the bio should render");
+            Assert.That(VisibleText(window), Does.Contain("3 posts · 41 comments"));
+        });
+    }
 
+    [AvaloniaTest]
+    public async Task SigningOutIsOnTheReadersOwnPageAndNobodyElses()
+    {
+        var services = new TestServices();
+
+        using var mine = new ProfileViewModel(
+            services.Services, new RecordingNavigator(), services.Api, AppSettings.Default,
+            new PersonId(1), () => Task.CompletedTask);
+        await mine.LoadAsync();
+
+        using var theirs = new ProfileViewModel(
+            services.Services, new RecordingNavigator(), services.Api, AppSettings.Default, new PersonId(1));
+        await theirs.LoadAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(VisibleText(Show(new ProfileView(), mine)), Does.Contain("Sign out"));
+            Assert.That(VisibleText(Show(new ProfileView(), theirs)), Does.Not.Contain("Sign out"));
+        });
+    }
+
+    [AvaloniaTest]
+    public async Task TappingTheAccountNameOpensTheProfileRatherThanASheet()
+    {
+        var services = new TestServices();
+        services.Api.IsAuthenticated.Returns(true);
+        services.Api.GetMyAccountAsync(Arg.Any<CancellationToken>())
+            .Returns(new Account(new PersonId(1), new Username("alice"), null, Sample.Instance, null));
+        await services.SessionStore.SaveAsync(new StoredSession(
+            AppSettings.Default.Instance, new SessionToken("jwt.token.value"), new Username("alice")));
+
+        using var shell = new MainViewModel(services.Services, AppSettings.Default);
+        await shell.InitialiseAsync();
+
+        shell.ToggleAccountCommand.Execute(null);
+        Settle();
+
+        Assert.That(shell.CurrentPage, Is.TypeOf<ProfileViewModel>());
+    }
 }

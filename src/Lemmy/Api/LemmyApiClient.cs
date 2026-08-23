@@ -441,6 +441,31 @@ public sealed class LemmyApiClient : ILemmyApi
     }
 
     /// <inheritdoc />
+    public async Task<PersonProfile> GetPersonAsync(
+        PersonId personId,
+        CancellationToken cancellationToken = default)
+    {
+        string endpoint;
+        using (var builder = new QueryStringBuilder(stackalloc char[QueryBufferLength]))
+        {
+            builder.Append("person_id", personId);
+            builder.Append("sort", PostSortType.New.ToWire());
+            builder.Append("limit", PageSize.Default);
+            endpoint = Endpoint("user", builder.Span);
+        }
+
+        GetPersonDetailsResponse response = await GetAsync(
+            endpoint, LemmyJson.Context.GetPersonDetailsResponse, cancellationToken).ConfigureAwait(false);
+
+        if (WireMapper.TryMapPersonProfile(response, out PersonProfile profile))
+        {
+            return profile;
+        }
+
+        throw new LemmyApiException($"{Instance.Value} did not send an account back.", endpoint, null);
+    }
+
+    /// <inheritdoc />
     public async Task<SiteSummary> GetSiteAsync(CancellationToken cancellationToken = default)
     {
         GetSiteResponse response = await GetAsync(ApiRoot + "site", LemmyJson.Context.GetSiteResponse, cancellationToken)

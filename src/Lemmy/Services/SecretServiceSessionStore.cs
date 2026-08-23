@@ -48,8 +48,14 @@ public sealed class SecretServiceSessionStore : ISessionStore
             using var attributes = new Attributes();
             IntPtr found = secret_password_lookupv_sync(IntPtr.Zero, attributes.Handle, IntPtr.Zero, out IntPtr error);
 
+            // Finding nothing is a fine answer and leaves no error. An error means the keyring
+            // itself could not be reached — the library loaded but there is no service behind it,
+            // which is a KDE session whose wallet is shut as readily as a machine without one.
+            // Reporting that as available would pick this store and then quietly fail to save.
+            bool reachable = error == IntPtr.Zero;
+
             Release(found, error);
-            return true;
+            return reachable;
         }
         catch (Exception exception) when (exception is DllNotFoundException or EntryPointNotFoundException or BadImageFormatException)
         {

@@ -132,6 +132,14 @@ public interface ILemmyApi
         bool deleted,
         CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Fetches an account's page: who they are and the most recent of what they have written.
+    /// </summary>
+    /// <exception cref="LemmyApiException">
+    /// The account does not exist on this instance, or the server refused the request.
+    /// </exception>
+    Task<PersonProfile> GetPersonAsync(PersonId personId, CancellationToken cancellationToken = default);
+
     /// <summary>Fetches the instance's own description and totals.</summary>
     /// <exception cref="LemmyApiException">The server refused the request or sent something unusable.</exception>
     Task<SiteSummary> GetSiteAsync(CancellationToken cancellationToken = default);

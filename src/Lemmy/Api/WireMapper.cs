@@ -222,6 +222,45 @@ internal static class WireMapper
         return true;
     }
 
+    /// <summary>
+    /// Maps an account's own page. The comments come back as a flat list of what they wrote rather
+    /// than as threads, so each is mapped on its own with no replies under it — which is the truth
+    /// here, not a simplification.
+    /// </summary>
+    internal static bool TryMapPersonProfile(GetPersonDetailsResponse response, out PersonProfile profile)
+    {
+        profile = null!;
+
+        PersonViewWire? view = response.PersonView;
+        if (view is null || !TryMapPerson(view.Person, out Person person))
+        {
+            return false;
+        }
+
+        MarkdownText.TryCreate((view.Person?.Bio).AsSpan(), out MarkdownText bio);
+
+        var comments = ImmutableArray.CreateBuilder<CommentNode>(response.Comments.Length);
+        foreach (CommentViewWire wire in response.Comments)
+        {
+            if (TryMapCommentNode(wire, out CommentNode node))
+            {
+                comments.Add(node);
+            }
+        }
+
+        profile = new PersonProfile(
+            person,
+            bio,
+            TryLink(view.Person?.Banner),
+            new PersonTally(
+                VoteCount.Clamp(view.Counts?.PostCount ?? 0),
+                VoteCount.Clamp(view.Counts?.CommentCount ?? 0)),
+            view.IsAdmin,
+            MapPostSummaries(response.Posts),
+            comments.ToImmutable());
+        return true;
+    }
+
     internal static VoteOutcome MapVoteOutcome(PostViewWire? wire)
     {
         PostTally tally = MapTally(wire?.Counts);

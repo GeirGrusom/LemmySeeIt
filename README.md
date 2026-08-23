@@ -163,10 +163,18 @@ require an admin to approve each application — and links out to its own sign-u
 creation happens in a browser, because it can involve a captcha, an application to write and an
 email to confirm.
 
+**Profiles.** Tapping any author's name — in a feed row, on a post, on a comment — opens their page:
+who they are, what they wrote about themselves, how much they have posted, and their recent posts
+and comments. Tap a comment there to open the post it was written on.
+
+**Your profile.** Tapping your account name in the header opens your own page: who you are, what you
+wrote about yourself, how much you have posted, and your recent posts and comments — tap a comment
+to open the post it was written on. Signing out lives here.
+
 **Signing in** is optional — everything above works without it. An account adds the **Subscribed**
 listing to the feed, shows the votes you have already cast, and is what turns the vote arrows on.
 The account control is in the header, next to the instance name; signing out lives inside the
-account sheet so a stray tap cannot end your session.
+profile page so a stray tap cannot end your session.
 
 **Licences.** Settings also links to the attribution page: this app's licence, the notice for the
 typeface it embeds, and every third-party package it ships, each with its licence and copyright.

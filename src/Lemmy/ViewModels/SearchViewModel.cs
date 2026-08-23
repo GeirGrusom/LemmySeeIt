@@ -93,7 +93,7 @@ public sealed partial class SearchViewModel : PageViewModel, IImageGallery
         DateTimeOffset now = Services.Now;
         foreach (PostSummary summary in results.Posts)
         {
-            var card = new PostCardViewModel(summary, Services.ImageLoader, now, settings.BlurNsfwImages, api, Services.Subscriptions, OpenPost, ViewImage);
+            var card = new PostCardViewModel(summary, Services.ImageLoader, now, settings.BlurNsfwImages, api, Services.Subscriptions, Navigator, OpenPost, ViewImage);
             Posts.Add(card);
             _ = card.LoadThumbnailAsync();
         }

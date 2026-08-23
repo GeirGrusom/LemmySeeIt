@@ -12,10 +12,31 @@ And a dead token is **not rejected**: Lemmy answers a request carrying one with 
 200 that simply omits the account, so "is this session still good" is a content check, not a status
 code. The password is used for one request and never stored.
 
-Signing out is deliberately behind the account sheet rather than the header control. It cannot be
-undone — the token is invalidated server-side, so getting back in means typing a password — and the
-header shifts as the account name replaces "Sign in", which makes a stray tap easy. One landed
-during testing and ended a live session, which is why it works this way now.
+Signing out lives on the account's own page rather than in the header. It cannot be undone — the
+token is invalidated server-side, so getting back in means typing a password — and the header shifts
+as the account name replaces "Sign in", which makes a stray tap easy. One landed during testing and
+ended a live session, which is why it works this way now. It first moved behind a sheet; the sheet
+became the profile page, which is a better home for it than a modal whose only purpose was to be an
+obstacle.
+
+Signing out takes the page with it: rebuilding the sections discards the back stack, so the reader
+lands on the feed rather than on a page describing an account they are no longer signed in as, whose
+own button would be left offering to sign out again.
+
+## Anybody's page
+
+`GET /api/v3/user` answers with the account, its counts, and the most recent of what it wrote. The
+comments come back as a flat list rather than as threads, so they are modelled that way — a
+`ProfileCommentViewModel` with no replies, no reply box and none of the author's own controls, which
+is what a list of things somebody wrote actually is. What it offers instead is the way back: the
+comment carries only its post's identifier, so opening one fetches that post first.
+
+Every byline leads here — a feed row, a post, a comment, a reply. The row view models take the
+navigator rather than another callback threaded down from the page, because opening a person needs
+no page context at all: there is no gallery to move through and no list to come back to, just an
+identifier. Whether the page offers to sign out is decided by the shell, comparing the person to the
+signed-in account, rather than by whichever byline was tapped — so a byline that happens to be your
+own opens the same page with the button, and everyone else's opens it without.
 
 ## Which servers to offer
 

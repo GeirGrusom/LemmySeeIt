@@ -21,7 +21,11 @@
                            IsVisible="{Binding IsFromSubscribedCommunity}"
                            Text="&#x2713;" />
                 <TextBlock Classes="meta" Text=" · " />
-                <TextBlock Classes="meta" Text="{Binding AuthorLabel}" />
+                <!-- The byline leads to whoever wrote it. A link rather than a plain label, so it
+                     looks like the control it is. -->
+                <Button Classes="link" Padding="0" Command="{Binding OpenAuthorCommand}">
+                    <TextBlock Classes="meta" Text="{Binding AuthorLabel}" />
+                </Button>
                 <Border Classes="chip" Margin="6,0,0,0" IsVisible="{Binding HasAuthorBadge}">
                     <TextBlock Classes="badge" Text="{Binding AuthorBadgeLabel}" />
                 </Border>

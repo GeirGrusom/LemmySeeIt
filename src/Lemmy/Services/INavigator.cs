@@ -35,4 +35,10 @@ public interface INavigator
     /// <param name="picture">The picture to show.</param>
     /// <param name="caption">What to call it, usually the author's alt text.</param>
     void ShowPicture(WebLink picture, string caption);
+
+    /// <summary>
+    /// Opens an account's page. Whether it offers to sign out is decided there, by whether this is
+    /// the reader's own account — not by whoever asked for it.
+    /// </summary>
+    void ShowProfile(PersonId person);
 }

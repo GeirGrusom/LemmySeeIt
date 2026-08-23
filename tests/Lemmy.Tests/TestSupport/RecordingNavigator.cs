@@ -20,6 +20,8 @@ internal sealed class RecordingNavigator : INavigator
 
     internal List<(WebLink Picture, string Caption)> PicturesShown { get; } = [];
 
+    internal List<PersonId> ProfilesShown { get; } = [];
+
     public bool CanPop => pushed.Count > 0;
 
     public void Push(PageViewModel page) => pushed.Add(page);
@@ -33,4 +35,6 @@ internal sealed class RecordingNavigator : INavigator
     }
 
     public void ShowPicture(WebLink picture, string caption) => PicturesShown.Add((picture, caption));
+
+    public void ShowProfile(PersonId person) => ProfilesShown.Add(person);
 }

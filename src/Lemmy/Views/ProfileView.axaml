@@ -1,0 +1,89 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:Lemmy.ViewModels"
+             xmlns:views="using:Lemmy.Views"
+             xmlns:md="using:Lemmy.Views.Markdown"
+             mc:Ignorable="d" d:DesignWidth="420" d:DesignHeight="800"
+             x:Class="Lemmy.Views.ProfileView"
+             x:DataType="vm:ProfileViewModel">
+
+    <ScrollViewer Padding="14,10,14,20">
+        <StackPanel Spacing="12">
+
+            <StackPanel Spacing="4">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <TextBlock Classes="title" Text="{Binding Title}" VerticalAlignment="Center" />
+                    <Border Classes="chip" VerticalAlignment="Center" IsVisible="{Binding IsAdmin}">
+                        <TextBlock Classes="badge" Text="ADMIN" />
+                    </Border>
+                </StackPanel>
+
+                <TextBlock Classes="meta"
+                           Foreground="{DynamicResource AccentText}"
+                           Text="{Binding QualifiedName}" />
+                <TextBlock Classes="meta" Text="{Binding ActivityLabel}" />
+                <TextBlock Classes="meta" Text="{Binding JoinedLabel}" />
+            </StackPanel>
+
+            <md:MarkdownView IsVisible="{Binding HasBio}" Blocks="{Binding Bio}" />
+
+            <ProgressBar IsIndeterminate="True" Width="140" HorizontalAlignment="Center"
+                         IsVisible="{Binding IsBusy}" />
+
+            <TextBlock Classes="body"
+                       Foreground="{DynamicResource NegativeText}"
+                       TextWrapping="Wrap"
+                       IsVisible="{Binding HasError}"
+                       Text="{Binding ErrorMessage}" />
+
+            <!-- Signing out lives here rather than in the header, where the layout shifts as the
+                 account name replaces "Sign in" and a stray tap could end the session. -->
+            <StackPanel Spacing="6" IsVisible="{Binding CanSignOut}">
+                <Border Height="1" Background="{DynamicResource DividerBrush}" />
+                <TextBlock Classes="meta"
+                           TextWrapping="Wrap"
+                           Text="Signing out ends this session on the server, so signing back in needs your password." />
+                <Button Content="Sign out"
+                        HorizontalAlignment="Left"
+                        IsEnabled="{Binding !IsSigningOut}"
+                        Command="{Binding SignOutCommand}" />
+                <Border Height="1" Margin="0,6,0,0" Background="{DynamicResource DividerBrush}" />
+            </StackPanel>
+
+            <TextBlock Classes="meta"
+                       Margin="0,10"
+                       HorizontalAlignment="Center"
+                       IsVisible="{Binding HasNothing}"
+                       Text="Nothing posted yet." />
+
+            <ItemsControl ItemsSource="{Binding Posts}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:PostCardViewModel">
+                        <views:PostCardView Margin="0,0,0,8" />
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <ItemsControl ItemsSource="{Binding Comments}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:ProfileCommentViewModel">
+                        <Button Classes="card" Margin="0,0,0,8" Command="{Binding OpenCommand}">
+                            <StackPanel Spacing="4">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <TextBlock Classes="meta" Text="&#x25B2;" />
+                                    <TextBlock Classes="meta" Text="{Binding ScoreLabel}" />
+                                    <TextBlock Classes="meta" Text="·" />
+                                    <TextBlock Classes="meta" Text="{Binding AgeLabel}" />
+                                </StackPanel>
+                                <md:MarkdownView Blocks="{Binding Content}" />
+                            </StackPanel>
+                        </Button>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

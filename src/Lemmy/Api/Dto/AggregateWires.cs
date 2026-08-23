@@ -45,6 +45,14 @@ internal sealed record CommunityAggregatesWire
 }
 
 /// <summary>An instance's totals as Lemmy's API v3 sends them.</summary>
+/// <summary>How much an account has written.</summary>
+internal sealed record PersonAggregatesWire
+{
+    public int PostCount { get; init; }
+
+    public int CommentCount { get; init; }
+}
+
 internal sealed record SiteAggregatesWire
 {
     public int Users { get; init; }

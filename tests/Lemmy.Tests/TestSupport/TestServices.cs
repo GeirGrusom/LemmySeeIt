@@ -29,6 +29,9 @@ internal sealed class TestServices
         Api.SearchAsync(Arg.Any<SearchQuery>(), Arg.Any<CancellationToken>())
             .Returns(Task.FromResult(SearchResults.Empty));
 
+        Api.GetPersonAsync(Arg.Any<PersonId>(), Arg.Any<CancellationToken>())
+            .Returns(Sample.PersonProfile());
+
         ApiFactory = Substitute.For<ILemmyApiFactory>();
         ApiFactory.Create(Arg.Any<InstanceAddress>(), Arg.Any<SessionToken>()).Returns(Api);
 

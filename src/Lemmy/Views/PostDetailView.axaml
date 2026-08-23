@@ -26,7 +26,9 @@
                                        Text="{Binding CommunityLabel}" />
                         </Button>
                         <TextBlock Classes="meta" Text=" · " />
-                        <TextBlock Classes="meta" Text="{Binding AuthorLabel}" />
+                        <Button Classes="link" Padding="0" Command="{Binding OpenAuthorCommand}">
+                            <TextBlock Classes="meta" Text="{Binding AuthorLabel}" />
+                        </Button>
                         <TextBlock Classes="meta" Text=" · " />
                         <TextBlock Classes="meta" Text="{Binding AgeLabel}" />
                         <views:SubscribeButtonView Margin="8,0,0,0" DataContext="{Binding Subscription}" />

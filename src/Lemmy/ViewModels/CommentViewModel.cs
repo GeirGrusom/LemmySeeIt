@@ -21,6 +21,7 @@ public sealed partial class CommentViewModel : ViewModelBase
     private readonly CurrentAccount account;
     private readonly MarkdownMedia media;
     private readonly ITextCopier copier;
+    private readonly INavigator navigator;
     private readonly DateTimeOffset now;
     private readonly ICommand? linkCommand;
 
@@ -29,6 +30,7 @@ public sealed partial class CommentViewModel : ViewModelBase
     /// <param name="now">The current time, for the age label.</param>
     /// <param name="api">The client this comment and its replies vote through.</param>
     /// <param name="media">How pictures written into the comment are fetched and opened.</param>
+    /// <param name="navigator">Where the author's name leads.</param>
     /// <param name="linkCommand">
     /// Opens a link pressed inside the comment. Passed down the tree rather than resolved per
     /// comment: a thread is hundreds of these, and they all open links the same way.
@@ -40,6 +42,7 @@ public sealed partial class CommentViewModel : ViewModelBase
         CurrentAccount account,
         MarkdownMedia media,
         ITextCopier copier,
+        INavigator navigator,
         ICommand? linkCommand = null)
     {
         ArgumentNullException.ThrowIfNull(node);
@@ -47,11 +50,13 @@ public sealed partial class CommentViewModel : ViewModelBase
         ArgumentNullException.ThrowIfNull(account);
         ArgumentNullException.ThrowIfNull(media);
         ArgumentNullException.ThrowIfNull(copier);
+        ArgumentNullException.ThrowIfNull(navigator);
 
         this.api = api;
         this.account = account;
         this.media = media;
         this.copier = copier;
+        this.navigator = navigator;
         this.now = now;
         this.linkCommand = linkCommand;
 
@@ -66,7 +71,7 @@ public sealed partial class CommentViewModel : ViewModelBase
             (vote, token) => api.VoteOnCommentAsync(node.Comment.Id, vote, token));
 
         Replies = new ObservableCollection<CommentViewModel>(
-            node.Replies.Select(reply => new CommentViewModel(reply, now, api, account, media, copier, linkCommand)));
+            node.Replies.Select(reply => new CommentViewModel(reply, now, api, account, media, copier, navigator, linkCommand)));
     }
 
     /// <summary>The comment and its replies.</summary>
@@ -89,6 +94,10 @@ public sealed partial class CommentViewModel : ViewModelBase
 
     /// <summary>The author's display name.</summary>
     public string AuthorLabel => Node.Creator.PreferredName;
+
+    /// <summary>Opens the author's page.</summary>
+    [RelayCommand]
+    private void OpenAuthor() => navigator.ShowProfile(Node.Creator.Id);
 
     /// <summary>How long ago the comment was made.</summary>
     public string AgeLabel { get; }
@@ -224,7 +233,7 @@ public sealed partial class CommentViewModel : ViewModelBase
 
         // Newest first, and at the top where it can be seen: the thread's sort is the server's
         // opinion of a comment that did not exist when it was asked.
-        Replies.Insert(0, new CommentViewModel(reply, now, api, account, media, copier, linkCommand));
+        Replies.Insert(0, new CommentViewModel(reply, now, api, account, media, copier, navigator, linkCommand));
 
         IsCollapsed = false;
         OnPropertyChanged(nameof(HasReplies));

@@ -19,6 +19,7 @@ public sealed partial class PostCardViewModel : ViewModelBase, IDisposable
 
     private readonly IImageLoader imageLoader;
     private readonly SubscriptionTracker subscriptions;
+    private readonly INavigator navigator;
     private readonly Action<PostCardViewModel> openRequested;
     private readonly Action<PostCardViewModel> viewImageRequested;
     private readonly CancellationTokenSource lifetime = new();
@@ -30,6 +31,7 @@ public sealed partial class PostCardViewModel : ViewModelBase, IDisposable
     /// <param name="blurNsfw">Whether images on posts flagged not safe for work start hidden.</param>
     /// <param name="api">The client the row votes through.</param>
     /// <param name="subscriptions">Tells the row whether its community is one the reader follows.</param>
+    /// <param name="navigator">Where the author's name leads.</param>
     /// <param name="openRequested">Called when the reader opens the post.</param>
     /// <param name="viewImageRequested">Called when the reader opens the picture without the post.</param>
     public PostCardViewModel(
@@ -39,6 +41,7 @@ public sealed partial class PostCardViewModel : ViewModelBase, IDisposable
         bool blurNsfw,
         ILemmyApi api,
         SubscriptionTracker subscriptions,
+        INavigator navigator,
         Action<PostCardViewModel> openRequested,
         Action<PostCardViewModel> viewImageRequested)
     {
@@ -46,12 +49,14 @@ public sealed partial class PostCardViewModel : ViewModelBase, IDisposable
         ArgumentNullException.ThrowIfNull(imageLoader);
         ArgumentNullException.ThrowIfNull(api);
         ArgumentNullException.ThrowIfNull(subscriptions);
+        ArgumentNullException.ThrowIfNull(navigator);
         ArgumentNullException.ThrowIfNull(openRequested);
         ArgumentNullException.ThrowIfNull(viewImageRequested);
 
         Summary = summary;
         this.imageLoader = imageLoader;
         this.subscriptions = subscriptions;
+        this.navigator = navigator;
         subscriptions.Changed += OnSubscriptionChanged;
         this.openRequested = openRequested;
         this.viewImageRequested = viewImageRequested;
@@ -79,6 +84,10 @@ public sealed partial class PostCardViewModel : ViewModelBase, IDisposable
 
     /// <summary>The author's display name.</summary>
     public string AuthorLabel => Summary.Creator.PreferredName;
+
+    /// <summary>Opens the author's page.</summary>
+    [RelayCommand]
+    private void OpenAuthor() => navigator.ShowProfile(Summary.Creator.Id);
 
     /// <summary>How long ago the post was made.</summary>
     public string AgeLabel { get; }

@@ -25,7 +25,11 @@
                             Command="{Binding ToggleCollapsedCommand}"
                             Content="{Binding ToggleLabel}"
                             IsVisible="{Binding HasReplies}" />
-                    <TextBlock Classes="meta" Foreground="{DynamicResource AccentText}" Text="{Binding AuthorLabel}" />
+                    <Button Classes="link" Padding="0" Command="{Binding OpenAuthorCommand}">
+                        <TextBlock Classes="meta"
+                                   Foreground="{DynamicResource AccentText}"
+                                   Text="{Binding AuthorLabel}" />
+                    </Button>
                     <Border Classes="chip" IsVisible="{Binding HasAuthorBadge}">
                         <TextBlock Classes="badge" Text="{Binding AuthorBadgeLabel}" />
                     </Border>

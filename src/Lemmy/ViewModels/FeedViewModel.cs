@@ -218,7 +218,7 @@ public sealed partial class FeedViewModel : PageViewModel, IImageGallery
     {
         foreach (PostSummary summary in page.Posts)
         {
-            var card = new PostCardViewModel(summary, Services.ImageLoader, Services.Now, settings.BlurNsfwImages, api, Services.Subscriptions, OpenPost, ViewImage);
+            var card = new PostCardViewModel(summary, Services.ImageLoader, Services.Now, settings.BlurNsfwImages, api, Services.Subscriptions, Navigator, OpenPost, ViewImage);
             Posts.Add(card);
 
             // Deliberately not awaited: the row is already on screen, and the image can catch up.

@@ -153,4 +153,15 @@ internal static class Sample
 
     internal static CommunitySummary CommunitySummary(int id = 2, string name = "technology") =>
         new(Community(id, name), new CommunityTally(new VoteCount(87409), new VoteCount(21286), new VoteCount(932665), new VoteCount(15822)));
+
+    /// <summary>An account's page, with one post and one comment on it.</summary>
+    internal static PersonProfile PersonProfile(int id = 1, string name = "alice") =>
+        new(
+            Person(id, name),
+            new MarkdownText("Reads more than posts."),
+            null,
+            new PersonTally(new VoteCount(3), new VoteCount(41)),
+            IsAdmin: false,
+            [PostSummary()],
+            [CommentNode()]);
 }

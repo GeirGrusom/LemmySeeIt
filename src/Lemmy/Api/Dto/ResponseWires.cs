@@ -41,10 +41,24 @@ internal sealed record SearchResponse
     public ImmutableArray<PersonViewWire> Users { get; init; } = [];
 }
 
-/// <summary>An account together with its counts, as search results carry it.</summary>
+/// <summary>An account together with its counts, as search results and its own page carry it.</summary>
 internal sealed record PersonViewWire
 {
     public PersonWire? Person { get; init; }
+
+    public PersonAggregatesWire? Counts { get; init; }
+
+    public bool IsAdmin { get; init; }
+}
+
+/// <summary>The body of <c>GET /api/v3/user</c>.</summary>
+internal sealed record GetPersonDetailsResponse
+{
+    public PersonViewWire? PersonView { get; init; }
+
+    public ImmutableArray<PostViewWire> Posts { get; init; } = [];
+
+    public ImmutableArray<CommentViewWire> Comments { get; init; } = [];
 }
 
 /// <summary>The body of <c>GET /api/v3/site</c>.</summary>

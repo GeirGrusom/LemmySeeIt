@@ -13,6 +13,9 @@ internal sealed record PersonWire
 
     public string? Banner { get; init; }
 
+    /// <summary>What the account wrote about itself, in Markdown.</summary>
+    public string? Bio { get; init; }
+
     public string? ActorId { get; init; }
 
     public bool Local { get; init; }

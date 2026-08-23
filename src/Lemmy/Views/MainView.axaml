@@ -193,34 +193,6 @@
         </Border>
 
         <!-- Who is signed in, and the only way out. -->
-        <Border IsVisible="{Binding IsAccountOpen}" Background="{DynamicResource ScrimBrush}">
-            <Border Background="{DynamicResource SurfaceBackground}"
-                    BorderBrush="{DynamicResource SurfaceBorder}"
-                    BorderThickness="1"
-                    CornerRadius="12"
-                    Padding="18"
-                    Margin="16"
-                    MaxWidth="420"
-                    VerticalAlignment="Center"
-                    HorizontalAlignment="Center">
-                <StackPanel Spacing="10">
-                    <TextBlock Classes="title" Text="{Binding AccountLabel}" />
-                    <TextBlock Classes="meta" Text="{Binding AccountQualifiedName}" />
-                    <TextBlock Classes="meta"
-                               TextWrapping="Wrap"
-                               Text="{Binding SessionNote, StringFormat='Your session is {0}.'}" />
-                    <TextBlock Classes="meta"
-                               TextWrapping="Wrap"
-                               Text="Signing out ends the session on the server too, so you will need your password again." />
-
-                    <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
-                        <Button Content="Close" Command="{Binding CloseAccountCommand}" />
-                        <Button Content="Sign out" Command="{Binding ConfirmSignOutCommand}" />
-                    </StackPanel>
-                </StackPanel>
-            </Border>
-        </Border>
-
         <!-- Sign in. -->
         <Border IsVisible="{Binding IsSignInOpen}" Background="{DynamicResource ScrimBrush}">
             <Border Background="{DynamicResource SurfaceBackground}"

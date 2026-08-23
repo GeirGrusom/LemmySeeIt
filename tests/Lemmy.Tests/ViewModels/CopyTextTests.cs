@@ -20,7 +20,8 @@ internal sealed class CopyTextTests
             services.Api,
             services.Services.Account,
             new MarkdownMedia(services.ImageLoader, null),
-            services.Copier);
+            services.Copier,
+            new RecordingNavigator());
 
     [Test]
     public async Task CopyingACommentPutsTheMarkdownOnTheClipboard()
