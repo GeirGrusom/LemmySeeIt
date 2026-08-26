@@ -93,6 +93,14 @@ the comment, never before, and a failure leaves both the text and the reason on 
 hypothetical: lemmy.world refuses posting from VPN exit nodes with a 401, and the first real comment
 this app tried to make came back exactly that way.
 
+`AcceptsReturn` is not enough to be able to type a paragraph. It says what the control does with a
+Return it receives; a soft keyboard decides for itself whether to send one, and it does not read
+that property. Left alone, Android offers a **Done** key that closes the keyboard, so a comment
+could only ever be one paragraph. The boxes that take prose — the comment box and the post body —
+therefore also ask the platform directly, through `TextInputOptions.Multiline` and a
+`ReturnKeyType` of `Return`. Nothing about this is visible on the desktop heads, where a physical
+Return has always just worked, which is why it survived to a phone.
+
 Editing takes the comment back from the server and keeps the node's replies. The edit and delete
 endpoints answer with the comment alone, and adopting their whole view would replace a node that has
 a thread under it with one that has none.
@@ -107,6 +115,48 @@ A comment shows Edit and Delete only to the account that wrote it, matched by pe
 restored while offline knows its own name but not its id, and an unknown id owns nothing — better to
 withhold the buttons from the rightful owner for one launch than to offer them on somebody else's
 comment.
+
+## Writing a post
+
+A post is a page rather than a box in a feed. A comment is one field and belongs where it is being
+made; a post is a title, a link, a body, a flag and a community, which does not fit above a feed on
+a phone. Being a page also means it is left by going back, which on Android is the gesture people
+already use.
+
+`PostDraft` carries what a post says and not where it goes. Lemmy cannot move a post between
+communities, so an edit has no community to offer and a new post must have one; a field that only
+half the callers may set is worse than a parameter that both are honest about. The community is
+therefore an argument to `CreatePostAsync` and simply absent from `EditPostAsync`.
+
+Empty is not the same as absent on the way out. Lemmy reads a missing field as *leave this one
+alone* and an empty one as *clear it*, so the two requests are deliberately built differently:
+creating omits a link it does not have, because `""` would be rejected as a malformed address, while
+editing sends `""` for both the link and the body. Omitting them there would make removing a link
+possible only by editing on the web.
+
+The body is refused when it is over-long rather than clipped. `MarkdownText` truncates, which is
+right for text arriving from a server we do not control — a clipped body is better than a post
+missing from the feed — and wrong for the author's own writing, where silently dropping the end of
+it is the worst available answer.
+
+A link typed without a scheme gets `https://`. People paste `example.com/article`, and refusing that
+is pedantry rather than validation. A scheme that is present and is not the web is refused instead
+of being prefixed, so `ftp://host` does not quietly become `https://ftp://host`.
+
+Afterwards the composer is left behind and the finished post is opened. The feed it was started from
+also gets the post inserted at the top, rather than being refetched: a brand new post does not
+necessarily sort into the first page of Hot or Top, so a refresh could plausibly answer without it,
+which reads as the post having failed.
+
+Editing takes the post back from the server and leaves the comment thread alone — an edit does not
+touch it — and the picture is only re-fetched when the link actually changed, so a delete or a
+restore does not make the image flicker. Deleting is a flag, exactly as it is for comments, so the
+author gets a **Restore** where the delete was. Edit and Delete are shown only to the account that
+wrote the post, matched by person id, on the same reasoning as comments.
+
+One consequence worth naming: the page heading is the post's title, and an edit changes it while the
+page is on screen. The shell follows the current page's `Title` rather than reading it once when the
+page is pushed, which is a subscription that lasts exactly as long as the page is the current one.
 
 ## Selecting text, and not selecting it
 

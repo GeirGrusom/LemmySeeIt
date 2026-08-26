@@ -73,6 +73,7 @@ copyright line differs.
 
 ## What it talks to
 
-Lemmy's HTTP API v3 — `post/list`, `post`, `comment/list`, `community/list`, `search` and `site`,
-anonymously unless signed in. That is the version every current instance serves; instances running
+Lemmy's HTTP API v3 — `post/list`, `post`, `comment/list`, `community/list`, `search` and `site` for
+reading, anonymously unless signed in; `post`, `post/like`, `post/delete`, `comment`,
+`comment/like`, `comment/delete` and `community/follow` for writing, which always needs a session. That is the version every current instance serves; instances running
 Lemmy 1.0 also expose a v4, and `LemmyApiClient` is the only file that would need to know.

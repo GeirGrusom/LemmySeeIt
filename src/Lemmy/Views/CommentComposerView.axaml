@@ -8,9 +8,15 @@
              x:DataType="vm:CommentComposerViewModel">
 
     <StackPanel Spacing="6">
+        <!-- AcceptsReturn is not enough on Android: it governs what the control does with a Return
+             it receives, while the soft keyboard decides whether to send one at all. Without these
+             the action key is Done, which closes the keyboard, and a comment cannot have a second
+             paragraph. -->
         <TextBox Text="{Binding Text}"
                  PlaceholderText="{Binding Placeholder}"
                  AcceptsReturn="True"
+                 TextInputOptions.Multiline="True"
+                 TextInputOptions.ReturnKeyType="Return"
                  TextWrapping="Wrap"
                  MinHeight="76"
                  MaxHeight="240"

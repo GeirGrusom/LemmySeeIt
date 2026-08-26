@@ -128,8 +128,31 @@ public sealed partial class FeedViewModel : PageViewModel, IImageGallery
     /// </summary>
     public bool IsLoadingFirstPage => IsBusy && Posts.Count == 0;
 
+    /// <summary>Whether there is an account to post with; signed out, the button is not offered.</summary>
+    public bool CanPost => api.IsAuthenticated;
+
     /// <inheritdoc />
     public override Task LoadAsync() => ReloadAsync();
+
+    /// <summary>
+    /// Opens the composer. A community feed already knows where the post is going; the front page
+    /// does not, so the composer asks.
+    /// </summary>
+    [RelayCommand]
+    private void NewPost() =>
+        Navigator.Push(PostComposerViewModel.ForNewPost(Services, Navigator, api, community, Posted));
+
+    /// <summary>
+    /// Takes the reader from the composer to what they just wrote, and leaves it at the top of the
+    /// feed behind. Re-fetching instead would be both slower and unreliable: a brand new post does
+    /// not necessarily sort into the first page of Hot or Top.
+    /// </summary>
+    private void Posted(PostSummary summary)
+    {
+        Navigator.Pop();
+        Posts.Insert(0, CreateCard(summary));
+        Navigator.Push(new PostDetailViewModel(Services, Navigator, api, summary, settings));
+    }
 
     /// <summary>Discards what is loaded and fetches the first page again.</summary>
     [RelayCommand]
@@ -218,11 +241,7 @@ public sealed partial class FeedViewModel : PageViewModel, IImageGallery
     {
         foreach (PostSummary summary in page.Posts)
         {
-            var card = new PostCardViewModel(summary, Services.ImageLoader, Services.Now, settings.BlurNsfwImages, api, Services.Subscriptions, Navigator, OpenPost, ViewImage);
-            Posts.Add(card);
-
-            // Deliberately not awaited: the row is already on screen, and the image can catch up.
-            _ = card.LoadThumbnailAsync();
+            Posts.Add(CreateCard(summary));
         }
 
         nextCursor = page.NextCursor;
@@ -241,6 +260,15 @@ public sealed partial class FeedViewModel : PageViewModel, IImageGallery
         }
 
         Posts.Clear();
+    }
+
+    private PostCardViewModel CreateCard(PostSummary summary)
+    {
+        var card = new PostCardViewModel(summary, Services.ImageLoader, Services.Now, settings.BlurNsfwImages, api, Services.Subscriptions, Navigator, OpenPost, ViewImage);
+
+        // Deliberately not awaited: the row is already on screen, and the image can catch up.
+        _ = card.LoadThumbnailAsync();
+        return card;
     }
 
     private void ViewImage(PostCardViewModel card) => Navigator.ShowImage(card.Summary, this);

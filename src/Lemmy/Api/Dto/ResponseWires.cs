@@ -134,6 +134,49 @@ internal sealed record CommentResponse
     public CommentViewWire? CommentView { get; init; }
 }
 
+/// <summary>The body sent to <c>POST /api/v3/post</c>.</summary>
+internal sealed record CreatePostRequestWire
+{
+    /// <summary>Lemmy calls the title "name".</summary>
+    public string? Name { get; init; }
+
+    public int CommunityId { get; init; }
+
+    /// <summary>Omitted when the post links nowhere; an empty string would be refused as a bad URL.</summary>
+    public string? Url { get; init; }
+
+    public string? Body { get; init; }
+
+    public bool Nsfw { get; init; }
+}
+
+/// <summary>The body sent to <c>PUT /api/v3/post</c>.</summary>
+/// <remarks>
+/// Unlike the create request, the optional fields are sent even when empty. Lemmy reads a missing
+/// field as "leave this one alone" and an empty one as "clear it", so omitting them would make
+/// removing a link or a body impossible rather than merely awkward.
+/// </remarks>
+internal sealed record EditPostRequestWire
+{
+    public int PostId { get; init; }
+
+    public string? Name { get; init; }
+
+    public string? Url { get; init; }
+
+    public string? Body { get; init; }
+
+    public bool Nsfw { get; init; }
+}
+
+/// <summary>The body sent to <c>POST /api/v3/post/delete</c>.</summary>
+internal sealed record DeletePostRequestWire
+{
+    public int PostId { get; init; }
+
+    public bool Deleted { get; init; }
+}
+
 /// <summary>The body sent to <c>POST /api/v3/comment</c>.</summary>
 internal sealed record CreateCommentRequestWire
 {

@@ -84,7 +84,9 @@
                                      LinkCommand="{Binding OpenMarkdownLinkCommand}"
                                      Media="{Binding Media}" />
 
-                    <StackPanel Orientation="Horizontal" Spacing="14">
+                    <!-- Wraps: with Edit and Delete on the author's own post this row is wider
+                         than a phone, and a Delete half off the edge is not a button. -->
+                    <WrapPanel ItemSpacing="14" LineSpacing="8">
                         <views:VoteBarView DataContext="{Binding Votes}" />
                         <StackPanel Orientation="Horizontal" Spacing="4">
                             <TextBlock Classes="meta" Text="&#x1F5E8;" />
@@ -106,7 +108,35 @@
                                        Foreground="{DynamicResource AccentText}"
                                        Text="Open on the web" />
                         </Button>
-                    </StackPanel>
+
+                        <Button Classes="link"
+                                Content="Edit"
+                                IsVisible="{Binding CanAmend}"
+                                Command="{Binding EditPostCommand}" />
+
+                        <Button Classes="link"
+                                Content="Delete"
+                                IsVisible="{Binding CanAmend}"
+                                IsEnabled="{Binding !IsAmending}"
+                                Command="{Binding ToggleDeletedCommand}" />
+
+                        <Button Classes="link"
+                                Content="Restore"
+                                IsVisible="{Binding CanRestore}"
+                                IsEnabled="{Binding !IsAmending}"
+                                Command="{Binding ToggleDeletedCommand}" />
+                    </WrapPanel>
+
+                    <TextBlock Classes="meta"
+                               TextWrapping="Wrap"
+                               IsVisible="{Binding IsPostDeleted}"
+                               Text="You deleted this post. Nobody else can see it until you put it back." />
+
+                    <TextBlock Classes="meta"
+                               TextWrapping="Wrap"
+                               Foreground="{DynamicResource NegativeText}"
+                               IsVisible="{Binding ActionError, Converter={x:Static ObjectConverters.IsNotNull}}"
+                               Text="{Binding ActionError}" />
                 </StackPanel>
             </Border>
 

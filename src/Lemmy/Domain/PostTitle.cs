@@ -68,6 +68,13 @@ public readonly record struct PostTitle
         return TryCreate(trimmed, out PostTitle title) ? title : null;
     }
 
+    /// <summary>Why <paramref name="value"/> cannot be used as a title, or <see langword="null"/> when it can.</summary>
+    public static string? Explain(ReadOnlySpan<char> value)
+    {
+        _ = IsLegal(value, out string? reason);
+        return reason;
+    }
+
     /// <inheritdoc />
     public override string ToString() => Value;
 

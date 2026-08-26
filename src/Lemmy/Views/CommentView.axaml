@@ -50,9 +50,9 @@
                 <!-- Reply, and the author's own controls. Only shown unfolded: a collapsed comment
                      is one the reader has put away. -->
                 <!-- Generous spacing: these sit side by side and one of them is Delete. -->
-                <StackPanel Orientation="Horizontal"
-                            Spacing="18"
-                            IsVisible="{Binding !IsCollapsed}">
+                <WrapPanel ItemSpacing="18"
+                           LineSpacing="8"
+                           IsVisible="{Binding !IsCollapsed}">
                     <Button Classes="link"
                             Content="Reply"
                             IsVisible="{Binding CanReply}"
@@ -77,7 +77,7 @@
                             IsVisible="{Binding CanRestore}"
                             IsEnabled="{Binding !IsAmending}"
                             Command="{Binding ToggleDeletedCommand}" />
-                </StackPanel>
+                </WrapPanel>
 
                 <TextBlock Classes="meta"
                            TextWrapping="Wrap"

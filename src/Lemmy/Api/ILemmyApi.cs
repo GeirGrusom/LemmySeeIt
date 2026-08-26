@@ -91,6 +91,45 @@ public interface ILemmyApi
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Posts something new to a community, and answers with the post as the feed would have sent it.
+    /// </summary>
+    /// <param name="community">Where it goes; a post cannot be moved afterwards.</param>
+    /// <param name="draft">What it says.</param>
+    /// <param name="cancellationToken">Abandons the request.</param>
+    /// <exception cref="LemmyApiException">
+    /// Nobody is signed in, the community does not take posts from this account, or the instance
+    /// sent back something unusable.
+    /// </exception>
+    Task<PostSummary> CreatePostAsync(
+        CommunityId community,
+        PostDraft draft,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Rewrites a post. Everything the draft carries is sent, including the parts left empty, so
+    /// that a link or a body can be taken away and not merely changed.
+    /// </summary>
+    /// <exception cref="LemmyApiException">
+    /// Nobody is signed in, the post is not the account's, or the instance refused the edit.
+    /// </exception>
+    Task<PostSummary> EditPostAsync(
+        PostId postId,
+        PostDraft draft,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Deletes a post, or restores one already deleted. As with comments, Lemmy's delete is a flag
+    /// rather than a removal, which is what makes putting it back possible.
+    /// </summary>
+    /// <exception cref="LemmyApiException">
+    /// Nobody is signed in, the post is not the account's, or the instance refused.
+    /// </exception>
+    Task<PostSummary> SetPostDeletedAsync(
+        PostId postId,
+        bool deleted,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Posts a comment, either on the post itself or as a reply to another comment.
     /// </summary>
     /// <param name="postId">The post being commented on.</param>

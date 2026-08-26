@@ -10,8 +10,8 @@ using Lemmy.Domain.Models;
 namespace Lemmy.Api;
 
 /// <summary>
-/// Talks to Lemmy's HTTP API v3 — the version every current instance serves. All requests are
-/// anonymous reads: this client never sends credentials and has no endpoint that writes.
+/// Talks to Lemmy's HTTP API v3 — the version every current instance serves. Reads work without a
+/// session; every write refuses before the request when there is no session to make it with.
 /// </summary>
 public sealed class LemmyApiClient : ILemmyApi
 {
@@ -339,6 +339,98 @@ public sealed class LemmyApiClient : ILemmyApi
             cancellationToken).ConfigureAwait(false);
 
         return response.CommunityView?.Subscribed.ToSubscriptionState() ?? SubscriptionState.NotSubscribed;
+    }
+
+    /// <inheritdoc />
+    public async Task<PostSummary> CreatePostAsync(
+        CommunityId community,
+        PostDraft draft,
+        CancellationToken cancellationToken = default)
+    {
+        RequireSession("post");
+        RequireDraft(draft);
+
+        PostResponse response = await PostAsync(
+            ApiRoot + "post",
+            new CreatePostRequestWire
+            {
+                Name = draft.Title.Value,
+                CommunityId = community.Value,
+                Url = draft.Url is { } link ? link.Value : null,
+                Body = draft.HasBody ? draft.Body.Value : null,
+                Nsfw = draft.IsNsfw,
+            },
+            LemmyJson.Context.CreatePostRequestWire,
+            LemmyJson.Context.PostResponse,
+            cancellationToken).ConfigureAwait(false);
+
+        return ReadPost(response, "post");
+    }
+
+    /// <inheritdoc />
+    public async Task<PostSummary> EditPostAsync(
+        PostId postId,
+        PostDraft draft,
+        CancellationToken cancellationToken = default)
+    {
+        RequireSession("edit a post");
+        RequireDraft(draft);
+
+        PostResponse response = await SendAsync(
+            HttpMethod.Put,
+            ApiRoot + "post",
+            new EditPostRequestWire
+            {
+                PostId = postId.Value,
+                Name = draft.Title.Value,
+
+                // Empty rather than absent: this is how a link or a body is taken away.
+                Url = draft.Url is { } link ? link.Value : string.Empty,
+                Body = draft.Body.Value,
+                Nsfw = draft.IsNsfw,
+            },
+            LemmyJson.Context.EditPostRequestWire,
+            LemmyJson.Context.PostResponse,
+            cancellationToken).ConfigureAwait(false);
+
+        return ReadPost(response, "edit");
+    }
+
+    /// <inheritdoc />
+    public async Task<PostSummary> SetPostDeletedAsync(
+        PostId postId,
+        bool deleted,
+        CancellationToken cancellationToken = default)
+    {
+        RequireSession(deleted ? "delete a post" : "restore a post");
+
+        PostResponse response = await PostAsync(
+            ApiRoot + "post/delete",
+            new DeletePostRequestWire { PostId = postId.Value, Deleted = deleted },
+            LemmyJson.Context.DeletePostRequestWire,
+            LemmyJson.Context.PostResponse,
+            cancellationToken).ConfigureAwait(false);
+
+        return ReadPost(response, deleted ? "delete" : "restore");
+    }
+
+    private PostSummary ReadPost(PostResponse response, string action)
+    {
+        if (WireMapper.TryMapPostSummary(response.PostView, out PostSummary summary))
+        {
+            return summary;
+        }
+
+        throw new LemmyApiException($"{Instance.Value} accepted the {action} but did not send the post back.");
+    }
+
+    /// <summary>Catches a form with no title here rather than letting the server phrase the complaint.</summary>
+    private static void RequireDraft(PostDraft draft)
+    {
+        if (!draft.IsValid)
+        {
+            throw new LemmyApiException("A post needs a title.");
+        }
     }
 
     /// <inheritdoc />

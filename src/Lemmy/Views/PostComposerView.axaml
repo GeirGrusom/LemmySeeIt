@@ -1,0 +1,166 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:Lemmy.ViewModels"
+             xmlns:models="using:Lemmy.Domain.Models"
+             mc:Ignorable="d" d:DesignWidth="420" d:DesignHeight="700"
+             x:Class="Lemmy.Views.PostComposerView"
+             x:DataType="vm:PostComposerViewModel">
+
+    <Panel>
+        <!-- The form. -->
+        <ScrollViewer Padding="10" IsVisible="{Binding !IsChoosingCommunity}">
+            <StackPanel Spacing="12" MaxWidth="760" HorizontalAlignment="Stretch">
+
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <TextBlock Classes="meta" VerticalAlignment="Center" Text="Posting to" />
+                    <Button Classes="link"
+                            IsEnabled="{Binding CanChooseCommunity}"
+                            Command="{Binding ChooseCommunityCommand}">
+                        <TextBlock Classes="meta"
+                                   Foreground="{DynamicResource AccentText}"
+                                   Text="{Binding CommunityLabel}" />
+                    </Button>
+                </StackPanel>
+
+                <StackPanel Spacing="4">
+                    <TextBlock Classes="meta" Text="Title" />
+                    <TextBox Text="{Binding Headline}"
+                             PlaceholderText="What is this about?"
+                             AcceptsReturn="False"
+                             TextWrapping="Wrap"
+                             IsEnabled="{Binding !IsSending}" />
+                    <TextBlock Classes="meta"
+                               HorizontalAlignment="Right"
+                               IsVisible="{Binding IsTitleNearLimit}"
+                               Text="{Binding TitleLengthLabel}" />
+                </StackPanel>
+
+                <StackPanel Spacing="4">
+                    <TextBlock Classes="meta" Text="Link (optional)" />
+                    <TextBox Text="{Binding Link}"
+                             PlaceholderText="https://example.com/article"
+                             AcceptsReturn="False"
+                             TextInputOptions.ContentType="Url"
+                             IsEnabled="{Binding !IsSending}" />
+                    <TextBlock Classes="meta"
+                               TextWrapping="Wrap"
+                               Foreground="{DynamicResource NegativeText}"
+                               IsVisible="{Binding HasLinkError}"
+                               Text="{Binding LinkError}" />
+                </StackPanel>
+
+                <StackPanel Spacing="4">
+                    <TextBlock Classes="meta" Text="Body (optional) — Markdown works" />
+                    <!-- See CommentComposerView: without these the Android keyboard offers Done
+                         rather than Return and the body cannot have paragraphs. -->
+                    <TextBox Text="{Binding Body}"
+                             PlaceholderText="Say more, if there is more to say"
+                             AcceptsReturn="True"
+                             TextInputOptions.Multiline="True"
+                             TextInputOptions.ReturnKeyType="Return"
+                             TextWrapping="Wrap"
+                             MinHeight="180"
+                             MaxHeight="420"
+                             IsEnabled="{Binding !IsSending}" />
+                    <TextBlock Classes="meta"
+                               HorizontalAlignment="Right"
+                               IsVisible="{Binding IsBodyNearLimit}"
+                               Text="{Binding BodyLengthLabel}" />
+                </StackPanel>
+
+                <CheckBox IsChecked="{Binding IsNsfw}"
+                          IsEnabled="{Binding !IsSending}"
+                          Content="Not safe for work" />
+
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <Button Classes="accent"
+                            Content="{Binding SubmitLabel}"
+                            Command="{Binding SubmitCommand}" />
+                    <ProgressBar IsIndeterminate="True"
+                                 Width="70"
+                                 Height="3"
+                                 VerticalAlignment="Center"
+                                 IsVisible="{Binding IsSending}" />
+                </StackPanel>
+
+                <TextBlock Classes="body"
+                           TextWrapping="Wrap"
+                           Foreground="{DynamicResource NegativeText}"
+                           IsVisible="{Binding HasError}"
+                           Text="{Binding ErrorMessage}" />
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- The community picker, over the form rather than beside it: on a phone there is only
+             room for one of the two, and choosing where a post goes comes before writing it. -->
+        <DockPanel LastChildFill="True" IsVisible="{Binding IsChoosingCommunity}">
+            <Border DockPanel.Dock="Top" Padding="10,8">
+                <StackPanel Spacing="8">
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                        <TextBox Grid.Column="0"
+                                 Text="{Binding CommunitySearch}"
+                                 PlaceholderText="Search communities">
+                            <TextBox.KeyBindings>
+                                <KeyBinding Gesture="Enter" Command="{Binding FindCommunitiesCommand}" />
+                            </TextBox.KeyBindings>
+                        </TextBox>
+                        <Button Grid.Column="1"
+                                Content="Find"
+                                Command="{Binding FindCommunitiesCommand}" />
+                    </Grid>
+
+                    <Button Classes="link"
+                            Content="Back to the post"
+                            IsVisible="{Binding HasCommunity}"
+                            Command="{Binding CancelChoosingCommand}" />
+                </StackPanel>
+            </Border>
+
+            <Panel>
+                <ScrollViewer Padding="10,0,10,10">
+                    <ItemsControl ItemsSource="{Binding Choices}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="models:CommunitySummary">
+                                <Button Classes="card"
+                                        Margin="0,0,0,8"
+                                        Command="{Binding $parent[ItemsControl].((vm:PostComposerViewModel)DataContext).PickCommunityCommand}"
+                                        CommandParameter="{Binding}">
+                                    <StackPanel Spacing="2">
+                                        <TextBlock Classes="title" FontSize="15" Text="{Binding Community.PreferredTitle}" />
+                                        <TextBlock Classes="meta"
+                                                   Foreground="{DynamicResource AccentText}"
+                                                   Text="{Binding Community.QualifiedName}" />
+                                    </StackPanel>
+                                </Button>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+
+                <ProgressBar IsIndeterminate="True"
+                             Width="140"
+                             VerticalAlignment="Center"
+                             HorizontalAlignment="Center"
+                             IsVisible="{Binding IsBusy}" />
+
+                <TextBlock Classes="meta"
+                           Margin="24"
+                           TextWrapping="Wrap"
+                           TextAlignment="Center"
+                           VerticalAlignment="Center"
+                           IsVisible="{Binding HasNoChoices}"
+                           Text="{Binding EmptyChoicesLabel}" />
+
+                <TextBlock Classes="body"
+                           Margin="24"
+                           TextWrapping="Wrap"
+                           VerticalAlignment="Center"
+                           Foreground="{DynamicResource NegativeText}"
+                           IsVisible="{Binding HasError}"
+                           Text="{Binding ErrorMessage}" />
+            </Panel>
+        </DockPanel>
+    </Panel>
+</UserControl>

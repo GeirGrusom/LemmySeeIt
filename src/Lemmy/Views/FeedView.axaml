@@ -17,7 +17,9 @@
                     <TextBlock Classes="meta" VerticalAlignment="Center" Text="{Binding SubtitleLabel}" />
                     <views:SubscribeButtonView DataContext="{Binding Subscription}" />
                 </StackPanel>
-                <StackPanel Orientation="Horizontal" Spacing="8">
+                <!-- Wraps rather than scrolls: four controls do not fit across a phone once the
+                     sort names are long, and a button half off the edge is worse than a second row. -->
+                <WrapPanel ItemSpacing="8" LineSpacing="8">
                     <ComboBox ItemsSource="{x:Static vm:DisplayOptions.PostSorts}"
                               SelectedValue="{Binding SelectedSort}"
                               SelectedValueBinding="{Binding Value}"
@@ -42,7 +44,12 @@
                     </ComboBox>
 
                     <Button Content="Refresh" Command="{Binding ReloadCommand}" />
-                </StackPanel>
+
+                    <Button Classes="accent"
+                            Content="New post"
+                            IsVisible="{Binding CanPost}"
+                            Command="{Binding NewPostCommand}" />
+                </WrapPanel>
             </StackPanel>
         </Border>
 

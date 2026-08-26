@@ -4,8 +4,8 @@ A reading client for [Lemmy](https://join-lemmy.org), the federated link-aggrega
 refugees landed on. Browse an instance's front page, drill into a community, read a comment thread,
 search, and switch between servers. Sign in and you also get your subscribed feed.
 
-Signed in you can vote, subscribe to communities, and comment — write one, reply to one, and edit or
-delete your own. Submitting posts is not built yet, and each post links out to its page on the web.
+Signed in you can vote, subscribe to communities, comment — write one, reply to one, and edit or
+delete your own — and post: write one, edit it, or delete it.
 
 Runs on Windows, Linux and Android from one shared codebase, with an iOS head that is kept
 compiling-ready.
@@ -118,8 +118,8 @@ server you are pointed at). Scrolling to the bottom loads more. Pull down to ref
 screen, or use the Refresh button.
 
 **Reading a post.** Tap a row to open it with its comment thread, which sorts by Hot, Top, New, Old
-or Controversial. **Open on the web** hands the post to your browser, which is where you go to
-comment or subscribe. Back returns to the feed at the row you were on, not the top.
+or Controversial. **Open on the web** hands the post to your browser, for the things this client
+does not do. Back returns to the feed at the row you were on, not the top.
 
 **Voting.** Signed in, every feed row, post and comment gets an up and a down arrow around its
 score. Pressing the arrow you already chose takes the vote back. The score moves as you press it
@@ -154,6 +154,13 @@ a **Reply**. Your own comments also offer **Edit** and **Delete**; a deleted com
 placeholder in the thread — so the replies under it still hang off something — and you can
 **Restore** it afterwards. Comments are written as Markdown, the same Markdown the app renders.
 
+**Posting.** Signed in, the feed carries a **New post** button. From a community's own page the post
+goes there; from the front page the form asks where first, offering the communities you follow and a
+search box for anywhere else. A post needs a title; a link and a Markdown body are both optional, and
+a link typed without `https://` gets one. Your own posts offer **Edit** and **Delete** on the post
+page, and a deleted post can be **Restored** — Lemmy's delete is a flag rather than a removal.
+A post cannot be moved between communities afterwards, which is Lemmy's rule rather than ours.
+
 **Communities and search.** Signed in, Communities opens on the ones you follow; the picker also
 offers All and Local, and signed out it opens on Local. Finding communities you do not already
 follow is what Search is for — it covers both posts and communities on the current server.
@@ -184,9 +191,11 @@ images until tapped. Signing in adopts whatever your account already has set.
 
 ## Limitations
 
-- Submitting posts is not wired up; each post links out to the web instead. Voting, subscribing and
-  commenting are what this client writes.
-- The comment box is a plain Markdown text area: no formatting toolbar and no preview.
+- Post and comment boxes are plain Markdown text areas: no formatting toolbar and no preview.
+- Posts carry text and a link. There is no image upload, so a picture post means linking one that is
+  already hosted somewhere.
+- Editing or deleting a post updates the post's own page; a feed already on screen behind it still
+  shows what it showed before until refreshed.
 - AVIF images do not decode, so those posts show the server's preview rather than the original.
 - A comment thread is fetched eight levels deep in one request; "12 more replies" is shown but not
   yet loadable, and the thread has no pull-to-refresh.

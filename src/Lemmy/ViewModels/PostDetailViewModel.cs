@@ -73,7 +73,7 @@ public sealed partial class PostDetailViewModel : PageViewModel
     }
 
     /// <summary>The post and everything joined onto it.</summary>
-    public PostSummary Summary { get; }
+    public PostSummary Summary { get; private set; }
 
     /// <summary>The arrows and the running score for the post itself.</summary>
     public VoteBarViewModel Votes { get; }
@@ -89,6 +89,21 @@ public sealed partial class PostDetailViewModel : PageViewModel
 
     /// <summary>Whether anybody is signed in to comment at all.</summary>
     public bool CanComment => api.IsAuthenticated && !Summary.Post.IsLocked;
+
+    /// <summary>Whether this post is the reader's own, and so theirs to change.</summary>
+    public bool IsOwn => Services.Account.Owns(Summary.Post.CreatorId);
+
+    /// <summary>Whether the author has deleted it.</summary>
+    public bool IsPostDeleted => Summary.Post.IsDeleted;
+
+    /// <summary>Whether the reader can edit or delete it: their own, and not already gone.</summary>
+    public bool CanAmend => IsOwn && !IsPostDeleted;
+
+    /// <summary>Whether the reader can put back one of their own they deleted.</summary>
+    public bool CanRestore => IsOwn && IsPostDeleted;
+
+    /// <summary>Whether the post has been edited since it was made.</summary>
+    public bool WasEdited => Summary.Post.Updated is not null;
 
     /// <inheritdoc />
     public override string Title => Summary.Post.Title.Value;
@@ -109,7 +124,7 @@ public sealed partial class PostDetailViewModel : PageViewModel
     public string CommentsLabel => Summary.Tally.Comments.ToCompactString();
 
     /// <summary>The post body, parsed into blocks for the renderer.</summary>
-    public ImmutableArray<MarkdownBlock> Body { get; }
+    public ImmutableArray<MarkdownBlock> Body { get; private set; }
 
     /// <summary>Whether there is a body to render.</summary>
     public bool HasBody => !Summary.Post.Body.IsEmpty;
@@ -150,6 +165,14 @@ public sealed partial class PostDetailViewModel : PageViewModel
     /// <summary>Whether the thread came back with nothing in it.</summary>
     [ObservableProperty]
     private bool hasNoComments;
+
+    /// <summary>Why the last delete or restore did not take, or <see langword="null"/>.</summary>
+    [ObservableProperty]
+    private string? actionError;
+
+    /// <summary>Set while a delete or restore is in flight.</summary>
+    [ObservableProperty]
+    private bool isAmending;
 
     /// <inheritdoc />
     public override async Task LoadAsync()
@@ -233,6 +256,83 @@ public sealed partial class PostDetailViewModel : PageViewModel
     /// <summary>Opens the author's page.</summary>
     [RelayCommand]
     private void OpenAuthor() => Navigator.ShowProfile(Summary.Creator.Id);
+
+    /// <summary>Opens the composer on this post, prefilled with what it says.</summary>
+    [RelayCommand]
+    private void EditPost() =>
+        Navigator.Push(PostComposerViewModel.ForEdit(Services, Navigator, api, Summary, Saved));
+
+    /// <summary>Deletes this post, or puts it back if it is already deleted.</summary>
+    [RelayCommand]
+    private async Task ToggleDeletedAsync(CancellationToken cancellationToken)
+    {
+        bool deleted = !IsPostDeleted;
+        IsAmending = true;
+        ActionError = null;
+
+        try
+        {
+            PostSummary updated = await api
+                .SetPostDeletedAsync(Summary.Post.Id, deleted, cancellationToken)
+                .ConfigureAwait(true);
+
+            Adopt(updated);
+        }
+        catch (OperationCanceledException)
+        {
+            // The page went away.
+        }
+        catch (LemmyApiException exception)
+        {
+            ActionError = exception.Message;
+        }
+        finally
+        {
+            IsAmending = false;
+        }
+    }
+
+    /// <summary>Comes back from the composer and shows what the post now says.</summary>
+    private void Saved(PostSummary updated)
+    {
+        Navigator.Pop();
+        Adopt(updated);
+    }
+
+    /// <summary>
+    /// Takes on a rewritten post. The comments below are untouched by an edit, so the thread stays
+    /// exactly as it is rather than being fetched again.
+    /// </summary>
+    private void Adopt(PostSummary updated)
+    {
+        WebLink? previousImage = Summary.Post.PreviewImage;
+
+        Summary = updated;
+        Body = MarkdownParser.Parse(updated.Post.Body);
+
+        OnPropertyChanged(nameof(Summary));
+        OnPropertyChanged(nameof(Title));
+        OnPropertyChanged(nameof(Body));
+        OnPropertyChanged(nameof(HasBody));
+        OnPropertyChanged(nameof(HasLink));
+        OnPropertyChanged(nameof(LinkLabel));
+        OnPropertyChanged(nameof(HasImage));
+        OnPropertyChanged(nameof(IsLocked));
+        OnPropertyChanged(nameof(CanComment));
+        OnPropertyChanged(nameof(IsPostDeleted));
+        OnPropertyChanged(nameof(CanAmend));
+        OnPropertyChanged(nameof(CanRestore));
+        OnPropertyChanged(nameof(WasEdited));
+        OpenLinkCommand.NotifyCanExecuteChanged();
+
+        // Only when the picture actually changed: blanking and re-fetching an unchanged one would
+        // make every delete and restore flicker.
+        if (previousImage != updated.Post.PreviewImage)
+        {
+            Image = null;
+            _ = LoadImageAsync();
+        }
+    }
 
     /// <summary>Copies the post's body as the Markdown it was written in.</summary>
     [RelayCommand]

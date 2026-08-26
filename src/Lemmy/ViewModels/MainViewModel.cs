@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Lemmy.Api;
@@ -56,6 +57,31 @@ public sealed partial class MainViewModel : ViewModelBase, INavigator, IDisposab
 
     /// <summary>The heading for the current page.</summary>
     public string PageTitle => CurrentPage?.Title ?? string.Empty;
+
+    /// <summary>
+    /// Follows the page's own heading while it is on screen. Almost every page has a fixed title,
+    /// but a post that is being edited does not, and this header is what is showing it.
+    /// </summary>
+    partial void OnCurrentPageChanging(PageViewModel? oldValue, PageViewModel? newValue)
+    {
+        if (oldValue is not null)
+        {
+            oldValue.PropertyChanged -= OnCurrentPagePropertyChanged;
+        }
+
+        if (newValue is not null)
+        {
+            newValue.PropertyChanged += OnCurrentPagePropertyChanged;
+        }
+    }
+
+    private void OnCurrentPagePropertyChanged(object? sender, PropertyChangedEventArgs eventArgs)
+    {
+        if (eventArgs.PropertyName is nameof(PageViewModel.Title))
+        {
+            OnPropertyChanged(nameof(PageTitle));
+        }
+    }
 
     /// <summary>The section whose root is at the bottom of the current back stack.</summary>
     [ObservableProperty]

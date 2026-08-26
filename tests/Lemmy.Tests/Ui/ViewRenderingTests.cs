@@ -4,6 +4,7 @@ using Avalonia.Interactivity;
 using Avalonia;
 using Avalonia.Headless;
 using Avalonia.Input;
+using Avalonia.Input.TextInput;
 using Avalonia.Headless.NUnit;
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
@@ -980,5 +981,106 @@ internal sealed class ViewRenderingTests
         Settle();
 
         Assert.That(shell.CurrentPage, Is.TypeOf<ProfileViewModel>());
+    }
+
+    /// <summary>
+    /// A soft keyboard decides for itself whether its action key sends a Return, and it answers
+    /// <see cref="TextBox.AcceptsReturn"/> not at all. Without the platform hint the key reads Done,
+    /// closes the keyboard, and a comment can only ever be one paragraph — which is what happened.
+    /// </summary>
+    [AvaloniaTest]
+    public void TheBoxesThatTakeParagraphsAskForAKeyboardThatCanTypeThem()
+    {
+        var services = new TestServices();
+        services.Api.IsAuthenticated.Returns(true);
+
+        var comment = new CommentComposerViewModel(ComposerPurpose.Comment, (_, _) => Task.CompletedTask);
+        using PostComposerViewModel post = PostComposerViewModel.ForNewPost(
+            services.Services, new RecordingNavigator(), services.Api, Sample.CommunitySummary(), _ => { });
+
+        TextBox commentBox = Boxes(Show(new CommentComposerView(), comment)).Single();
+        TextBox bodyBox = Boxes(Show(new PostComposerView(), post))
+            .Single(box => box.AcceptsReturn);
+
+        Assert.Multiple(() =>
+        {
+            foreach (TextBox box in new[] { commentBox, bodyBox })
+            {
+                Assert.That(box.AcceptsReturn, Is.True);
+                Assert.That(TextInputOptions.GetMultiline(box), Is.True);
+                Assert.That(TextInputOptions.GetReturnKeyType(box), Is.EqualTo(TextInputReturnKeyType.Return));
+            }
+        });
+    }
+
+    private static IEnumerable<TextBox> Boxes(Control root) => Descendants(root).OfType<TextBox>();
+
+    [AvaloniaTest]
+    public void ThePostFormDrawsItsThreeFields()
+    {
+        var services = new TestServices();
+        services.Api.IsAuthenticated.Returns(true);
+
+        using PostComposerViewModel composer = PostComposerViewModel.ForNewPost(
+            services.Services, new RecordingNavigator(), services.Api, Sample.CommunitySummary(), _ => { });
+
+        Window window = Show(new PostComposerView(), composer);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(VisibleText(window), Does.Contain("Posting to"));
+            Assert.That(VisibleText(window), Does.Contain("!technology@lemmy.world"));
+            Assert.That(VisibleText(window), Does.Contain("Title"));
+            Assert.That(VisibleText(window), Does.Contain("Link (optional)"));
+            Assert.That(VisibleText(window), Does.Contain("Not safe for work"));
+            Assert.That(VisibleText(window), Does.Contain("Post"));
+        });
+    }
+
+    [AvaloniaTest]
+    public async Task ThePostFormAsksWhereItIsGoingWhenNobodySaid()
+    {
+        var services = new TestServices();
+        services.Api.IsAuthenticated.Returns(true);
+        services.Api.GetCommunitiesAsync(Arg.Any<Lemmy.Api.CommunityQuery>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(ImmutableArray.Create(Sample.CommunitySummary())));
+
+        using PostComposerViewModel composer = PostComposerViewModel.ForNewPost(
+            services.Services, new RecordingNavigator(), services.Api, null, _ => { });
+        await composer.LoadAsync();
+
+        Window window = Show(new PostComposerView(), composer);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(VisibleText(window), Does.Contain("Search communities"));
+            Assert.That(VisibleText(window), Does.Contain("!technology@lemmy.world"), "the picker lists what it found");
+            Assert.That(VisibleText(window), Does.Not.Contain("Link (optional)"), "the form is behind the picker");
+        });
+    }
+
+    /// <summary>
+    /// Editing and deleting sit in the same row as everything else a post offers, so a mistake here
+    /// would put them on other people's posts rather than merely hide them from the author.
+    /// </summary>
+    [AvaloniaTest]
+    public void EditAndDeleteAreOnTheReadersOwnPostAndNobodyElses()
+    {
+        var services = new TestServices();
+        services.Api.IsAuthenticated.Returns(true);
+        services.Account.Set(new Account(new PersonId(1), new Username("someone"), null, Sample.Instance, null));
+
+        using var mine = new PostDetailViewModel(
+            services.Services, new RecordingNavigator(), services.Api, Sample.PostSummary(), AppSettings.Default);
+
+        PostSummary somebodyElses = Sample.PostSummary() with { Post = Sample.Post() with { CreatorId = new PersonId(99) } };
+        using var theirs = new PostDetailViewModel(
+            services.Services, new RecordingNavigator(), services.Api, somebodyElses, AppSettings.Default);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(VisibleText(Show(new PostDetailView(), mine)), Does.Contain("Delete"));
+            Assert.That(VisibleText(Show(new PostDetailView(), theirs)), Does.Not.Contain("Delete"));
+        });
     }
 }
