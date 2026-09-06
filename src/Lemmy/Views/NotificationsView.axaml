@@ -1,0 +1,131 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:Lemmy.ViewModels"
+             xmlns:views="using:Lemmy.Views"
+             xmlns:md="using:Lemmy.Views.Markdown"
+             mc:Ignorable="d" d:DesignWidth="420" d:DesignHeight="700"
+             x:Class="Lemmy.Views.NotificationsView"
+             x:DataType="vm:NotificationsViewModel">
+
+    <DockPanel LastChildFill="True">
+
+        <!-- Wraps: "Showing unread" and "Mark all read" together are wider than a phone. -->
+        <WrapPanel DockPanel.Dock="Top" ItemSpacing="14" LineSpacing="8" Margin="10,8">
+            <Button Classes="link" Command="{Binding ToggleFilterCommand}">
+                <TextBlock Classes="meta"
+                           Foreground="{DynamicResource AccentText}"
+                           Text="{Binding FilterLabel}" />
+            </Button>
+            <Button Classes="link"
+                    Content="Mark all read"
+                    IsVisible="{Binding CanMarkAllRead}"
+                    IsEnabled="{Binding !IsMarkingAll}"
+                    Command="{Binding MarkAllReadCommand}" />
+        </WrapPanel>
+
+        <TextBlock DockPanel.Dock="Top"
+                   Classes="meta"
+                   Margin="10,0,10,6"
+                   TextWrapping="Wrap"
+                   Foreground="{DynamicResource NegativeText}"
+                   IsVisible="{Binding ActionError, Converter={x:Static ObjectConverters.IsNotNull}}"
+                   Text="{Binding ActionError}" />
+
+        <Panel>
+            <RefreshContainer PullDirection="TopToBottom" RefreshRequested="OnRefreshRequested">
+                <ScrollViewer Padding="10,0,10,10">
+                    <ItemsControl ItemsSource="{Binding Notifications}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:NotificationViewModel">
+
+                                <Border Margin="0,0,0,10"
+                                        Padding="12"
+                                        CornerRadius="10"
+                                        Background="{DynamicResource SurfaceBackground}"
+                                        BorderBrush="{DynamicResource SurfaceBorder}"
+                                        BorderThickness="1">
+                                    <StackPanel Spacing="6">
+
+                                        <WrapPanel>
+                                            <!-- An unread one is marked, not merely un-dimmed: a
+                                                 shade of grey is not something to ask a reader to
+                                                 spot in a list of twenty. -->
+                                            <Border Classes="count"
+                                                    Width="8"
+                                                    MinWidth="8"
+                                                    Height="8"
+                                                    Padding="0"
+                                                    Margin="0,0,8,0"
+                                                    CornerRadius="4"
+                                                    IsVisible="{Binding IsUnread}" />
+                                            <TextBlock Classes="meta"
+                                                       Foreground="{DynamicResource AccentText}"
+                                                       Text="{Binding AuthorLabel}" />
+                                            <TextBlock Classes="meta" Text=" " />
+                                            <TextBlock Classes="meta" Text="{Binding KindLabel}" />
+                                            <TextBlock Classes="meta" Text=" · " />
+                                            <TextBlock Classes="meta" Text="{Binding AgeLabel}" />
+                                        </WrapPanel>
+
+                                        <md:MarkdownView Blocks="{Binding Content}" />
+
+                                        <Button Classes="link"
+                                                Padding="0"
+                                                HorizontalAlignment="Stretch"
+                                                HorizontalContentAlignment="Left"
+                                                Command="{Binding OpenCommand}">
+                                            <StackPanel>
+                                                <TextBlock Classes="meta"
+                                                           TextWrapping="Wrap"
+                                                           Foreground="{DynamicResource AccentText}"
+                                                           Text="{Binding PostLabel}" />
+                                                <TextBlock Classes="meta" Text="{Binding CommunityLabel}" />
+                                            </StackPanel>
+                                        </Button>
+
+                                        <WrapPanel ItemSpacing="14" LineSpacing="8">
+                                            <Button Classes="link" Command="{Binding ToggleReadCommand}">
+                                                <TextBlock Text="{Binding ToggleReadLabel}" />
+                                            </Button>
+                                        </WrapPanel>
+
+                                        <TextBlock Classes="meta"
+                                                   TextWrapping="Wrap"
+                                                   Foreground="{DynamicResource NegativeText}"
+                                                   IsVisible="{Binding ActionError, Converter={x:Static ObjectConverters.IsNotNull}}"
+                                                   Text="{Binding ActionError}" />
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </RefreshContainer>
+
+            <ProgressBar IsIndeterminate="True"
+                         Width="140"
+                         VerticalAlignment="Center"
+                         HorizontalAlignment="Center"
+                         IsVisible="{Binding IsBusy}" />
+
+            <TextBlock Classes="body"
+                       Margin="24"
+                       VerticalAlignment="Center"
+                       TextAlignment="Center"
+                       TextWrapping="Wrap"
+                       IsVisible="{Binding HasNothing}"
+                       Text="{Binding NothingLabel}" />
+
+            <TextBlock Classes="body"
+                       Margin="24"
+                       VerticalAlignment="Center"
+                       TextAlignment="Center"
+                       TextWrapping="Wrap"
+                       Foreground="{DynamicResource NegativeText}"
+                       IsVisible="{Binding HasError}"
+                       Text="{Binding ErrorMessage}" />
+        </Panel>
+    </DockPanel>
+</UserControl>

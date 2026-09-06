@@ -36,6 +36,14 @@ namespace Lemmy.Api;
 [JsonSerializable(typeof(VoteCommentRequestWire))]
 [JsonSerializable(typeof(LoginResponse))]
 [JsonSerializable(typeof(LoginRequestWire))]
+[JsonSerializable(typeof(GetUnreadCountResponse))]
+[JsonSerializable(typeof(GetRepliesResponse))]
+[JsonSerializable(typeof(GetPersonMentionsResponse))]
+[JsonSerializable(typeof(CommentReplyResponse))]
+[JsonSerializable(typeof(PersonMentionResponse))]
+[JsonSerializable(typeof(MarkCommentReplyReadRequestWire))]
+[JsonSerializable(typeof(MarkPersonMentionReadRequestWire))]
+[JsonSerializable(typeof(MarkAllReadRequestWire))]
 [JsonSerializable(typeof(ErrorResponse))]
 internal sealed partial class LemmyJsonContext : JsonSerializerContext;
 

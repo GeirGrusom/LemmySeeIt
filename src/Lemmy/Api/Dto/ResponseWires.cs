@@ -245,3 +245,106 @@ internal sealed record LoginRequestWire
 
     public string? Totp2faToken { get; init; }
 }
+
+/// <summary>The body of <c>GET /api/v3/user/unread_count</c>.</summary>
+internal sealed record GetUnreadCountResponse
+{
+    public int Replies { get; init; }
+
+    public int Mentions { get; init; }
+
+    public int PrivateMessages { get; init; }
+}
+
+/// <summary>
+/// The row that makes a comment a notification. Lemmy has two of these — <c>comment_reply</c> and
+/// <c>person_mention</c> — and their fields are identical, so one record reads both and which one
+/// arrived is what says whether it was a reply or a mention.
+/// </summary>
+internal sealed record NotificationMarkerWire
+{
+    public int Id { get; init; }
+
+    public int RecipientId { get; init; }
+
+    public int CommentId { get; init; }
+
+    public bool Read { get; init; }
+
+    public DateTimeOffset? Published { get; init; }
+}
+
+/// <summary>
+/// A notification as both of Lemmy's lists carry it: a comment with its post and community joined
+/// on, plus whichever marker row addressed it to this account.
+/// </summary>
+internal sealed record NotificationViewWire
+{
+    public NotificationMarkerWire? CommentReply { get; init; }
+
+    public NotificationMarkerWire? PersonMention { get; init; }
+
+    public CommentWire? Comment { get; init; }
+
+    public PersonWire? Creator { get; init; }
+
+    public PostWire? Post { get; init; }
+
+    public CommunityWire? Community { get; init; }
+
+    public CommentAggregatesWire? Counts { get; init; }
+
+    /// <summary>How the signed-in account voted. Absent entirely when nobody is signed in.</summary>
+    public int? MyVote { get; init; }
+
+    public bool CreatorIsModerator { get; init; }
+
+    public bool CreatorIsAdmin { get; init; }
+}
+
+/// <summary>The body of <c>GET /api/v3/user/replies</c>.</summary>
+internal sealed record GetRepliesResponse
+{
+    public ImmutableArray<NotificationViewWire> Replies { get; init; } = [];
+}
+
+/// <summary>The body of <c>GET /api/v3/user/mention</c>.</summary>
+internal sealed record GetPersonMentionsResponse
+{
+    public ImmutableArray<NotificationViewWire> Mentions { get; init; } = [];
+}
+
+/// <summary>The body of <c>POST /api/v3/comment/mark_as_read</c>.</summary>
+internal sealed record CommentReplyResponse
+{
+    public NotificationViewWire? CommentReplyView { get; init; }
+}
+
+/// <summary>The body of <c>POST /api/v3/user/mention/mark_as_read</c>.</summary>
+internal sealed record PersonMentionResponse
+{
+    public NotificationViewWire? PersonMentionView { get; init; }
+}
+
+/// <summary>The body of <c>POST /api/v3/comment/mark_as_read</c>.</summary>
+internal sealed record MarkCommentReplyReadRequestWire
+{
+    public required int CommentReplyId { get; init; }
+
+    public required bool Read { get; init; }
+}
+
+/// <summary>The body of <c>POST /api/v3/user/mention/mark_as_read</c>.</summary>
+internal sealed record MarkPersonMentionReadRequestWire
+{
+    public required int PersonMentionId { get; init; }
+
+    public required bool Read { get; init; }
+}
+
+/// <summary>
+/// The body of <c>POST /api/v3/user/mark_all_as_read</c>, which takes nothing at all. Sent as an
+/// empty object rather than as no body, because the endpoint still expects JSON.
+/// </summary>
+internal sealed record MarkAllReadRequestWire;
+

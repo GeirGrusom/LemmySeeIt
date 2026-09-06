@@ -46,6 +46,10 @@ server's ordering within each level. A comment whose parent is absent becomes a 
 makes a fetched sub-thread renderable on its own — and that is exactly what arrives when a reader
 presses the count of replies a truncated thread is missing.
 
+The notification lists are the one place where the client merges two endpoints into a single answer.
+Replies and mentions are fetched together, mapped through one wire record — their rows differ only
+in which marker block is present — and returned as one list in time order.
+
 ## Attribution is generated, not maintained
 
 The licences page lists every third-party package the build ships, and nobody keeps that list by

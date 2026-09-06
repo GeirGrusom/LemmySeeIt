@@ -184,6 +184,12 @@ listing to the feed, shows the votes you have already cast, and is what turns th
 The account control is in the header, next to the instance name; signing out lives inside the
 profile page so a stray tap cannot end your session.
 
+**Notifications.** When somebody replies to you or writes your name into a comment, a count appears
+to the left of your account name in the header. Tapping it lists them newest first, whichever of the
+two Lemmy keeps them in. Each one shows what was written and the post it was written on; opening one
+marks it read, and there is **Mark all read** for the rest. The list starts on unread only and can
+be switched to everything, and it pulls down to refresh.
+
 **Licences.** Settings also links to the attribution page: this app's licence, the notice for the
 typeface it embeds, and every third-party package it ships, each with its licence and copyright.
 
@@ -204,6 +210,10 @@ images until tapped. Signing in adopts whatever your account already has set.
   demand — the count of what is missing is the control that fetches it. Pulling the page down
   re-reads the thread; the post above it keeps the counts it arrived with.
 - `@user@instance` and `!community@instance` mentions are not linkified.
+- The notification count leaves out private messages. The server counts them, but there is nowhere
+  here to read one, so counting them would show a number nothing could clear.
+- Nothing polls for notifications. The count is fetched at launch, on signing in, and on leaving the
+  notification list — so a reply arriving while you read shows up the next time one of those happens.
 - The iOS head keeps a session in memory only — it has no keychain support yet, so signing in does
   not survive a restart there.
 

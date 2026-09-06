@@ -89,6 +89,36 @@ to travel to the community's home instance and be acknowledged, which is not ins
 failure. Pending counts as following, so the button unsubscribes rather than trying to follow twice.
 The optimistic state is Pending too, for the same reason: it is the honest guess.
 
+## The unread count, and what it deliberately leaves out
+
+Lemmy keeps three separate counts of what is waiting for an account — replies, mentions and private
+messages — and one endpoint that reports all three. The badge beside the account name counts the
+first two only. There is nowhere in this app to read a private message, so counting them would put a
+number on screen that nothing the reader could do would ever clear. `UnreadTally` holds all three
+and adds up only the two, which keeps the omission in one place with the reason attached.
+
+The two lists behind the count are separate endpoints as well, and Lemmy numbers their rows
+separately: reply 7 and mention 7 are different things, marked read through different endpoints. So
+the kind travels with the identifier everywhere — a `Notification` carries both, and the wire record
+decides the kind from which marker block arrived rather than from which request it answered. The two
+marker blocks have identical fields, which is why one record reads both.
+
+The client fetches both lists at once and merges them into one time order. Concatenating them would
+have given the reader all the replies and then all the mentions, which is not a notification list.
+The timestamp it sorts on is the marker's, not the comment's: a federated comment can reach this
+instance long after it was written, and what the reader is being told about is the arrival.
+
+The count is shared state rather than a callback, like the subscription tracker and the current
+account before it — the header shows it and a page two levels down changes it. Marking one read
+moves it by one rather than recounting the rows on screen, because those rows are one page of a
+possibly longer list and recounting would silently shrink a badge that is telling the truth. Marking
+everything read empties it, since the endpoint really does clear the lot. Leaving the list asks the
+server again, which is the cheap way to be right after a page of local guesses.
+
+Nothing polls. A badge a few minutes stale costs nothing; a phone waking its radio on a timer to
+count something costs battery all day. It is asked for at launch, on signing in, and on coming back
+from the list.
+
 ## A thread goes on screen a screenful at a time
 
 Opening a busy post used to freeze the app. Measured on a Galaxy S24 against a 179-comment thread

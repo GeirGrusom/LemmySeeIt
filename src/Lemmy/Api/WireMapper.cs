@@ -261,6 +261,83 @@ internal static class WireMapper
         return true;
     }
 
+    /// <summary>
+    /// Turns one row of either notification list into a notification. Which marker arrived decides
+    /// the kind; a row carrying neither is not a notification and is dropped.
+    /// </summary>
+    internal static bool TryMapNotification(NotificationViewWire? wire, out Notification notification)
+    {
+        notification = null!;
+
+        if (wire is null)
+        {
+            return false;
+        }
+
+        NotificationKind kind;
+        NotificationMarkerWire marker;
+
+        if (wire.CommentReply is { } reply)
+        {
+            kind = NotificationKind.Reply;
+            marker = reply;
+        }
+        else if (wire.PersonMention is { } mention)
+        {
+            kind = NotificationKind.Mention;
+            marker = mention;
+        }
+        else
+        {
+            return false;
+        }
+
+        if (!NotificationId.TryCreate(marker.Id, out NotificationId id)
+            || !TryMapComment(wire.Comment, out Comment comment)
+            || !TryMapPerson(wire.Creator, out Person creator)
+            || !TryMapPost(wire.Post, out Post post)
+            || !TryMapCommunity(wire.Community, out Community community))
+        {
+            return false;
+        }
+
+        notification = new Notification(
+            kind,
+            id,
+            comment,
+            creator,
+            post,
+            community,
+            MapTally(wire.Counts),
+            // The marker's own timestamp, not the comment's: an edit does not raise a notification
+            // again, and a federated comment can reach this instance long after it was written.
+            marker.Published ?? comment.Published,
+            marker.Read,
+            wire.MyVote.ToVote());
+
+        return true;
+    }
+
+    /// <summary>Maps a list of notification rows, dropping any this client cannot read.</summary>
+    internal static ImmutableArray<Notification> MapNotifications(ImmutableArray<NotificationViewWire> wires)
+    {
+        var builder = ImmutableArray.CreateBuilder<Notification>(wires.Length);
+        foreach (NotificationViewWire wire in wires)
+        {
+            if (TryMapNotification(wire, out Notification notification))
+            {
+                builder.Add(notification);
+            }
+        }
+
+        return builder.ToImmutable();
+    }
+
+    internal static UnreadTally MapUnreadTally(GetUnreadCountResponse? response) =>
+        response is null
+            ? UnreadTally.None
+            : new UnreadTally(response.Replies, response.Mentions, response.PrivateMessages);
+
     internal static VoteOutcome MapVoteOutcome(PostViewWire? wire)
     {
         PostTally tally = MapTally(wire?.Counts);

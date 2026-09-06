@@ -51,6 +51,36 @@ public interface ILemmyApi
     /// <exception cref="LemmyApiException">The server refused the request or sent something unusable.</exception>
     Task<CommentThread> GetCommentsAsync(CommentQuery query, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// How much is waiting for the signed-in account. Answers an empty tally rather than refusing
+    /// when nobody is signed in: the shell asks this on every launch, and being signed out is an
+    /// ordinary answer to the question, not an error.
+    /// </summary>
+    Task<UnreadTally> GetUnreadCountAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// The replies and mentions addressed to the signed-in account, newest first. Lemmy keeps these
+    /// in two separate lists; this fetches both and merges them, because the reader is owed one
+    /// list in time order rather than two they have to interleave in their head.
+    /// </summary>
+    Task<ImmutableArray<Notification>> GetNotificationsAsync(
+        NotificationQuery query,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>Marks one notification read, or puts it back to unread.</summary>
+    /// <param name="kind">Which list it came from; the two are marked read through different endpoints.</param>
+    /// <param name="id">Its row in that list.</param>
+    /// <param name="read">Whether it should now count as seen.</param>
+    /// <param name="cancellationToken">Cancels the request.</param>
+    Task<Notification> SetNotificationReadAsync(
+        NotificationKind kind,
+        NotificationId id,
+        bool read,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>Marks everything waiting as read, which is one request rather than one per row.</summary>
+    Task MarkEverythingReadAsync(CancellationToken cancellationToken = default);
+
     /// <summary>Fetches one page of a community listing.</summary>
     /// <exception cref="LemmyApiException">The server refused the request or sent something unusable.</exception>
     Task<ImmutableArray<CommunitySummary>> GetCommunitiesAsync(CommunityQuery query, CancellationToken cancellationToken = default);

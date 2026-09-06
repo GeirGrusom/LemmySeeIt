@@ -53,6 +53,18 @@
                             </StackPanel>
                         </Button>
 
+                        <!-- Left of the name, where a count belongs: it is about the account, and
+                             the name is what it is about. -->
+                        <Button Classes="link"
+                                Padding="2,4"
+                                ToolTip.Tip="Replies and mentions"
+                                IsVisible="{Binding HasUnread}"
+                                Command="{Binding ShowNotificationsCommand}">
+                            <Border Classes="count">
+                                <TextBlock Text="{Binding UnreadLabel}" />
+                            </Border>
+                        </Button>
+
                         <Button Classes="link"
                                 Padding="8,4"
                                 ToolTip.Tip="Sign in or out"

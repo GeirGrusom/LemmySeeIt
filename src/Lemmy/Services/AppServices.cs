@@ -14,6 +14,7 @@ namespace Lemmy.Services;
 /// <param name="Subscriptions">What the app knows about the account's subscriptions.</param>
 /// <param name="Account">Who is signed in, for rows that need to know whether something is theirs.</param>
 /// <param name="Copier">Puts text on the clipboard, which a finger cannot do by selecting.</param>
+/// <param name="Unread">How much is waiting for the account, shared by the header and the list.</param>
 public sealed record AppServices(
     ILemmyApiFactory ApiFactory,
     IImageLoader ImageLoader,
@@ -23,7 +24,8 @@ public sealed record AppServices(
     TimeProvider TimeProvider,
     SubscriptionTracker Subscriptions,
     CurrentAccount Account,
-    ITextCopier Copier)
+    ITextCopier Copier,
+    UnreadCounter Unread)
 {
     /// <summary>The real services, for an app that is actually running.</summary>
     public static AppServices CreateDefault(string userAgent, ISessionStore? sessionStore = null)
@@ -40,7 +42,8 @@ public sealed record AppServices(
             TimeProvider.System,
             new SubscriptionTracker(),
             new CurrentAccount(),
-            platform);
+            platform,
+            new UnreadCounter());
     }
 
     /// <summary>The current time, as everything that formats a timestamp should ask for it.</summary>

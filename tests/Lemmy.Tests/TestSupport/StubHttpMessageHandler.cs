@@ -22,6 +22,27 @@ internal sealed class StubHttpMessageHandler : HttpMessageHandler
             Content = new StringContent(json, Encoding.UTF8, "application/json"),
         });
 
+    /// <summary>
+    /// Answers each request with the body whose key its path contains. Matched by path rather than
+    /// by call order, because the calls that need this are made concurrently and nothing promises
+    /// which one reaches the handler first.
+    /// </summary>
+    internal static StubHttpMessageHandler ReturningByPath(params (string Path, string Json)[] bodies) =>
+        new(request =>
+        {
+            string path = request.RequestUri?.AbsolutePath ?? string.Empty;
+            string json = bodies.FirstOrDefault(body => path.Contains(body.Path, StringComparison.Ordinal)).Json
+                ?? throw new InvalidOperationException($"Nothing scripted for '{path}'.");
+
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(json, Encoding.UTF8, "application/json"),
+            };
+        });
+
+    /// <summary>How many requests were made, so a test can assert that none was.</summary>
+    internal int RequestCount => requestedUris.Count;
+
     /// <summary>Throws the same transport failure for every request.</summary>
     internal static StubHttpMessageHandler Failing(Exception exception) =>
         new(_ => throw exception);

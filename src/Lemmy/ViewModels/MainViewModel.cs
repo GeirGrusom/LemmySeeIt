@@ -48,6 +48,14 @@ public sealed partial class MainViewModel : ViewModelBase, INavigator, IDisposab
         instanceInput = settings.Instance.Value;
         instanceLabel = settings.Instance.Value;
         sessionNote = services.SessionStore.Description;
+
+        services.Unread.Changed += OnUnreadChanged;
+    }
+
+    private void OnUnreadChanged(object? sender, EventArgs eventArgs)
+    {
+        OnPropertyChanged(nameof(UnreadLabel));
+        OnPropertyChanged(nameof(HasUnread));
     }
 
     /// <summary>The page currently on screen.</summary>
@@ -107,10 +115,59 @@ public sealed partial class MainViewModel : ViewModelBase, INavigator, IDisposab
     [ObservableProperty]
     private ImageViewerViewModel? imageViewer;
 
+    /// <summary>How much is waiting: the badge beside the account name.</summary>
+    public string UnreadLabel => services.Unread.Tally.Label;
+
+    /// <summary>
+    /// Whether to show the badge at all. Only when signed in and only when there is something in
+    /// it: a nought beside the account name is a control that says nothing.
+    /// </summary>
+    public bool HasUnread => Account is not null && services.Unread.Tally.Any;
+
+    /// <summary>Opens the list of replies and mentions.</summary>
+    [RelayCommand]
+    private void ShowNotifications()
+    {
+        if (Account is null)
+        {
+            return;
+        }
+
+        Push(new NotificationsViewModel(services, this, api, settings));
+    }
+
+    /// <summary>
+    /// Asks the server how much is waiting. Called at launch, on signing in and on coming back from
+    /// the notification list — not on a timer: a badge a few minutes stale costs nothing, and a
+    /// phone waking its radio to poll a counter costs battery all day.
+    /// </summary>
+    private async Task RefreshUnreadAsync()
+    {
+        if (!session.IsValid)
+        {
+            services.Unread.Set(UnreadTally.None);
+            return;
+        }
+
+        try
+        {
+            services.Unread.Set(await api.GetUnreadCountAsync().ConfigureAwait(true));
+        }
+        catch (LemmyApiException)
+        {
+            // A badge is not worth an error on the screen; it will be right the next time we ask.
+        }
+        catch (OperationCanceledException)
+        {
+            // The shell is going away.
+        }
+    }
+
     /// <summary>Who is signed in on this instance, or <see langword="null"/> when nobody is.</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsSignedIn))]
     [NotifyPropertyChangedFor(nameof(AccountLabel))]
+    [NotifyPropertyChangedFor(nameof(HasUnread))]
     private Account? account;
 
     /// <summary>Whether the sign-in sheet is open.</summary>
@@ -177,6 +234,10 @@ public sealed partial class MainViewModel : ViewModelBase, INavigator, IDisposab
 
         ApplyInstance(settings.Instance);
         await ShowSectionAsync(AppSection.Feed).ConfigureAwait(true);
+
+        // Last: the feed is what the reader came for, and a badge arriving a moment after it costs
+        // nobody anything.
+        await RefreshUnreadAsync().ConfigureAwait(true);
     }
 
     /// <summary>
@@ -292,6 +353,13 @@ public sealed partial class MainViewModel : ViewModelBase, INavigator, IDisposab
 
         PageViewModel? leaving = CurrentPage;
         SetPage(previous);
+
+        // The list is where the count changes, and it only ever showed a page of it. Ask the server
+        // again on the way out rather than trusting what was counted on screen.
+        if (leaving is NotificationsViewModel)
+        {
+            _ = RefreshUnreadAsync();
+        }
 
         // A section root stays alive for the reader to come back to; anything else is finished with.
         if (leaving is not null && !sectionRoots.ContainsValue(leaving))
@@ -503,6 +571,7 @@ public sealed partial class MainViewModel : ViewModelBase, INavigator, IDisposab
 
             IsSignInOpen = false;
             await ReopenSectionsAsync().ConfigureAwait(true);
+            await RefreshUnreadAsync().ConfigureAwait(true);
         }
         catch (LemmyApiException exception)
         {
@@ -528,6 +597,7 @@ public sealed partial class MainViewModel : ViewModelBase, INavigator, IDisposab
         session = default;
         Account = null;
         services.Account.Set(null);
+        services.Unread.Set(UnreadTally.None);
 
         await services.SessionStore.ClearAsync().ConfigureAwait(true);
         await signedIn.LogOutAsync().ConfigureAwait(true);
@@ -750,6 +820,8 @@ public sealed partial class MainViewModel : ViewModelBase, INavigator, IDisposab
         }
 
         isDisposed = true;
+
+        services.Unread.Changed -= OnUnreadChanged;
 
         CloseImage();
         ClearBackStack();

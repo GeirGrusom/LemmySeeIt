@@ -155,6 +155,128 @@ public sealed class LemmyApiClient : ILemmyApi
     }
 
     /// <inheritdoc />
+    public async Task<UnreadTally> GetUnreadCountAsync(CancellationToken cancellationToken = default)
+    {
+        // Nobody signed in means nothing is waiting. The shell asks on every launch, and a refusal
+        // here would turn an ordinary signed-out start into an error on the screen.
+        if (!session.IsValid)
+        {
+            return UnreadTally.None;
+        }
+
+        GetUnreadCountResponse response = await GetAsync(
+            ApiRoot + "user/unread_count",
+            LemmyJson.Context.GetUnreadCountResponse,
+            cancellationToken).ConfigureAwait(false);
+
+        return WireMapper.MapUnreadTally(response);
+    }
+
+    /// <inheritdoc />
+    public async Task<ImmutableArray<Notification>> GetNotificationsAsync(
+        NotificationQuery query,
+        CancellationToken cancellationToken = default)
+    {
+        if (!session.IsValid)
+        {
+            return [];
+        }
+
+        // Both lists at once: they are independent requests and waiting for one before starting the
+        // other would double how long the page takes for no reason.
+        Task<GetRepliesResponse> replies = GetAsync(
+            NotificationEndpoint("user/replies", query),
+            LemmyJson.Context.GetRepliesResponse,
+            cancellationToken);
+
+        Task<GetPersonMentionsResponse> mentions = GetAsync(
+            NotificationEndpoint("user/mention", query),
+            LemmyJson.Context.GetPersonMentionsResponse,
+            cancellationToken);
+
+        await Task.WhenAll(replies, mentions).ConfigureAwait(false);
+
+        ImmutableArray<Notification> both =
+        [
+            .. WireMapper.MapNotifications(replies.Result.Replies),
+            .. WireMapper.MapNotifications(mentions.Result.Mentions),
+        ];
+
+        // Merged into one time order. Each list arrived sorted on its own, but concatenated they
+        // would read as all the replies and then all the mentions, which is not a notification list.
+        return [.. both.OrderByDescending(notification => notification.Received)];
+    }
+
+    /// <inheritdoc />
+    public async Task<Notification> SetNotificationReadAsync(
+        NotificationKind kind,
+        NotificationId id,
+        bool read,
+        CancellationToken cancellationToken = default)
+    {
+        RequireSession("mark a notification read");
+
+        NotificationViewWire? view;
+
+        if (kind == NotificationKind.Reply)
+        {
+            CommentReplyResponse response = await PostAsync(
+                ApiRoot + "comment/mark_as_read",
+                new MarkCommentReplyReadRequestWire { CommentReplyId = id.Value, Read = read },
+                LemmyJson.Context.MarkCommentReplyReadRequestWire,
+                LemmyJson.Context.CommentReplyResponse,
+                cancellationToken).ConfigureAwait(false);
+
+            view = response.CommentReplyView;
+        }
+        else
+        {
+            PersonMentionResponse response = await PostAsync(
+                ApiRoot + "user/mention/mark_as_read",
+                new MarkPersonMentionReadRequestWire { PersonMentionId = id.Value, Read = read },
+                LemmyJson.Context.MarkPersonMentionReadRequestWire,
+                LemmyJson.Context.PersonMentionResponse,
+                cancellationToken).ConfigureAwait(false);
+
+            view = response.PersonMentionView;
+        }
+
+        if (!WireMapper.TryMapNotification(view, out Notification notification))
+        {
+            throw new LemmyApiException(
+                "That notification came back in a shape this client cannot read.",
+                ApiRoot + "mark_as_read",
+                HttpStatusCode.OK);
+        }
+
+        return notification;
+    }
+
+    /// <inheritdoc />
+    public async Task MarkEverythingReadAsync(CancellationToken cancellationToken = default)
+    {
+        RequireSession("mark notifications read");
+
+        await PostAsync(
+            ApiRoot + "user/mark_all_as_read",
+            new MarkAllReadRequestWire(),
+            LemmyJson.Context.MarkAllReadRequestWire,
+            LemmyJson.Context.GetRepliesResponse,
+            cancellationToken).ConfigureAwait(false);
+    }
+
+    private static string NotificationEndpoint(string path, NotificationQuery query)
+    {
+        using var builder = new QueryStringBuilder(stackalloc char[QueryBufferLength]);
+        builder.Append("sort", query.Sort.ToWire());
+        builder.Append("page", query.PageNumber.ToString(CultureInfo.InvariantCulture));
+        builder.Append("limit", query.PageSize);
+        builder.Append("unread_only", query.UnreadOnly);
+
+        return Endpoint(path, builder.Span);
+    }
+
+    /// <inheritdoc />
     public async Task<ImmutableArray<CommunitySummary>> GetCommunitiesAsync(
         CommunityQuery query,
         CancellationToken cancellationToken = default)

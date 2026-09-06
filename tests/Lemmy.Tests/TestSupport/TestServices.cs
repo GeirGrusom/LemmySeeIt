@@ -49,11 +49,21 @@ internal sealed class TestServices
         Account = new CurrentAccount();
         Copier = Substitute.For<ITextCopier>();
         Copier.CopyAsync(Arg.Any<string?>()).Returns(true);
+        Unread = new UnreadCounter();
+
+        // Nothing waiting by default: the shell asks on every launch, and a substitute that answered
+        // default(UnreadTally) through an unstubbed call would be saying the same thing anyway.
+        Api.GetUnreadCountAsync(Arg.Any<CancellationToken>()).Returns(Task.FromResult(UnreadTally.None));
+        Api.GetNotificationsAsync(Arg.Any<NotificationQuery>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(ImmutableArray<Notification>.Empty));
+
         Services = new AppServices(
-            ApiFactory, ImageLoader, SettingsStore, LinkOpener, SessionStore, Clock, Subscriptions, Account, Copier);
+            ApiFactory, ImageLoader, SettingsStore, LinkOpener, SessionStore, Clock, Subscriptions, Account, Copier, Unread);
     }
 
     internal SubscriptionTracker Subscriptions { get; }
+
+    internal UnreadCounter Unread { get; }
 
     internal CurrentAccount Account { get; }
 

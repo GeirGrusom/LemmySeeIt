@@ -164,4 +164,22 @@ internal static class Sample
             IsAdmin: false,
             [PostSummary()],
             [CommentNode()]);
+
+    internal static Notification Notification(
+        int id = 7,
+        NotificationKind kind = NotificationKind.Reply,
+        bool isRead = false,
+        int postId = 10,
+        string content = "A comment",
+        int minutesAgo = 5) =>
+        new(
+            kind,
+            new NotificationId(id),
+            Comment(200 + id, $"0.{200 + id}", content),
+            Person(2, "bob"),
+            Post(postId),
+            Community(),
+            new CommentTally(new Score(3), new VoteCount(3), new VoteCount(0), new VoteCount(0)),
+            FixedTimeProvider.Reference.AddMinutes(-minutesAgo),
+            isRead);
 }

@@ -230,6 +230,48 @@ internal sealed class ViewRenderingTests
     }
 
     [AvaloniaTest]
+    public async Task TheNotificationListRendersWhatCameBack()
+    {
+        var services = new TestServices();
+        services.Api.GetNotificationsAsync(Arg.Any<Lemmy.Api.NotificationQuery>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(ImmutableArray.Create(
+                Sample.Notification(7),
+                Sample.Notification(9, NotificationKind.Mention, isRead: true))));
+
+        using var page = new NotificationsViewModel(
+            services.Services, new RecordingNavigator(), services.Api, AppSettings.Default);
+        await page.LoadAsync();
+
+        Window window = Show(new NotificationsView(), page);
+
+        Assert.That(
+            VisibleText(window),
+            Does.Contain("bob").And.Contain("mentioned you").And.Contain("Mark all read"));
+    }
+
+    /// <summary>
+    /// The count sits in the header beside the account name, and only when there is one to show.
+    /// </summary>
+    [AvaloniaTest]
+    public async Task TheHeaderShowsTheUnreadCountBesideTheAccountName()
+    {
+        var services = new TestServices();
+        services.FeedReturns(Sample.PostPage(2));
+        using var shell = new MainViewModel(services.Services, AppSettings.Default);
+        await shell.InitialiseAsync();
+        Window window = Show(new MainView(), shell);
+
+        Assert.That(VisibleText(window), Does.Not.Contain("4"), "nobody is signed in");
+
+        services.Account.Set(new Account(new PersonId(1), new Username("alice"), null, Sample.Instance, null));
+        shell.Account = new Account(new PersonId(1), new Username("alice"), null, Sample.Instance, null);
+        services.Unread.Set(new UnreadTally(4, 0, 0));
+        Settle();
+
+        Assert.That(VisibleText(window), Does.Contain("4").And.Contain("alice"));
+    }
+
+    [AvaloniaTest]
     public void TheSearchScreenStartsWithItsPrompt()
     {
         var services = new TestServices();

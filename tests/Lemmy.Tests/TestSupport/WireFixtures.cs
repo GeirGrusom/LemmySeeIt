@@ -277,4 +277,73 @@ internal static class WireFixtures
     """;
 
     internal const string ErrorBody = """{"error":"couldnt_find_post"}""";
+
+    /// <summary>The joined rows every notification carries, whichever list it came from.</summary>
+    private const string NotificationBody = """
+      "creator": {
+        "id": 2, "name": "bob", "actor_id": "https://lemmy.world/u/bob",
+        "published": "2023-01-01T00:00:00Z", "local": true, "banned": false,
+        "deleted": false, "bot_account": false, "instance_id": 1
+      },
+      "post": {
+        "id": 10, "name": "A post", "creator_id": 1, "community_id": 5,
+        "ap_id": "https://lemmy.world/post/10", "published": "2026-08-21T09:00:00Z",
+        "removed": false, "deleted": false, "locked": false, "nsfw": false,
+        "featured_community": false, "featured_local": false, "local": true, "language_id": 0
+      },
+      "community": {
+        "id": 5, "name": "technology", "title": "Technology",
+        "actor_id": "https://lemmy.world/c/technology", "published": "2023-01-01T00:00:00Z",
+        "local": true, "removed": false, "deleted": false, "nsfw": false,
+        "hidden": false, "posting_restricted_to_mods": false, "instance_id": 1
+      },
+      "creator_is_moderator": false, "creator_is_admin": false
+    """;
+
+    /// <summary>
+    /// One row of the reply list. Identical to a mention row apart from the marker block, which is
+    /// the whole reason one wire record reads both.
+    /// </summary>
+    internal const string ReplyRow = """
+    {
+      "comment_reply": { "id": 7, "recipient_id": 1, "comment_id": 200, "read": false, "published": "2026-09-01T10:00:00Z" },
+      "comment": {
+        "id": 200, "creator_id": 2, "post_id": 10, "content": "Nice one",
+        "path": "0.100.200", "ap_id": "https://lemmy.world/comment/200",
+        "published": "2026-08-21T11:00:00Z", "removed": false, "deleted": false,
+        "distinguished": false, "local": true, "language_id": 0
+      },
+      "counts": { "comment_id": 200, "score": 4, "upvotes": 4, "downvotes": 0, "child_count": 0 },
+      "my_vote": 1,
+    """ + NotificationBody + "}";
+
+    /// <summary>One row of the mention list, raised a day after the reply.</summary>
+    internal const string MentionRow = """
+    {
+      "person_mention": { "id": 9, "recipient_id": 1, "comment_id": 300, "read": true, "published": "2026-09-02T10:00:00Z" },
+      "comment": {
+        "id": 300, "creator_id": 2, "post_id": 10, "content": "@you what do you think",
+        "path": "0.300", "ap_id": "https://lemmy.world/comment/300",
+        "published": "2026-08-21T12:00:00Z", "removed": false, "deleted": false,
+        "distinguished": false, "local": true, "language_id": 0
+      },
+      "counts": { "comment_id": 300, "score": 1, "upvotes": 1, "downvotes": 0, "child_count": 0 },
+    """ + NotificationBody + "}";
+
+    /// <summary>The body of <c>GET /api/v3/user/replies</c>.</summary>
+    internal const string ReplyList = "{\"replies\":[" + ReplyRow + "]}";
+
+    /// <summary>The body of <c>GET /api/v3/user/mention</c>.</summary>
+    internal const string MentionList = "{\"mentions\":[" + MentionRow + "]}";
+
+    /// <summary>The body of <c>POST /api/v3/comment/mark_as_read</c>.</summary>
+    internal const string MarkedReplyRead = "{\"comment_reply_view\":" + ReplyRow + "}";
+
+    /// <summary>The body of <c>POST /api/v3/user/mention/mark_as_read</c>.</summary>
+    internal const string MarkedMentionRead = "{\"person_mention_view\":" + MentionRow + "}";
+
+    /// <summary>The body of <c>GET /api/v3/user/unread_count</c>.</summary>
+    internal const string UnreadCount = """
+    { "replies": 3, "mentions": 2, "private_messages": 7 }
+    """;
 }
