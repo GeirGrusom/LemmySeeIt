@@ -66,7 +66,7 @@ internal sealed class MarkdownImageTests
     {
         IImageLoader loader = Substitute.For<IImageLoader>();
         loader.LoadPictureAsync(Arg.Any<WebLink>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
-            .Returns(Still());
+            .Returns(PictureLoad.Loaded(Still()));
 
         (_, Window window) = Show(new MarkdownMedia(loader, null));
         Expander(window).IsExpanded = true;
@@ -88,7 +88,7 @@ internal sealed class MarkdownImageTests
     {
         IImageLoader loader = Substitute.For<IImageLoader>();
         loader.LoadPictureAsync(Arg.Any<WebLink>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
-            .Returns(Still());
+            .Returns(PictureLoad.Loaded(Still()));
 
         (_, Window window) = Show(new MarkdownMedia(loader, null));
         Expander expander = Expander(window);
@@ -108,11 +108,26 @@ internal sealed class MarkdownImageTests
     }
 
     [AvaloniaTest]
-    public async Task APictureThatWillNotLoadSaysSoRatherThanStayingBlank()
+    public async Task APictureThatWillNotLoadSaysSoRatherThanStayingBlank() =>
+        Assert.That(await FailureTextAsync(PictureLoad.Unreachable), Does.Contain("could not be downloaded"));
+
+    /// <summary>
+    /// Naming the format matters more than it looks: an AVIF is not a broken picture and not a bad
+    /// connection, and a reader who is told "could not be loaded" will keep trying it.
+    /// </summary>
+    [AvaloniaTest]
+    public async Task APictureInAFormatThisAppCannotShowSaysWhichFormat() =>
+        Assert.That(await FailureTextAsync(PictureLoad.CannotDecode("AVIF")), Does.Contain("an AVIF"));
+
+    [AvaloniaTest]
+    public async Task APictureThatIsJustRubbishDoesNotPretendToNameIt() =>
+        Assert.That(await FailureTextAsync(PictureLoad.CannotDecode(null)), Does.Contain("damaged"));
+
+    private static async Task<string> FailureTextAsync(PictureLoad failure)
     {
         IImageLoader loader = Substitute.For<IImageLoader>();
         loader.LoadPictureAsync(Arg.Any<WebLink>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
-            .Returns((AnimatedImage?)null);
+            .Returns(failure);
 
         (_, Window window) = Show(new MarkdownMedia(loader, null));
         Expander(window).IsExpanded = true;
@@ -120,9 +135,9 @@ internal sealed class MarkdownImageTests
         await Task.Yield();
         Dispatcher.UIThread.RunJobs();
 
-        Assert.That(
-            window.GetVisualDescendants().OfType<TextBlock>().Any(t => (t.Text ?? "").Contains("could not be loaded")),
-            Is.True);
+        return string.Join(
+            " ",
+            window.GetVisualDescendants().OfType<TextBlock>().Select(block => block.Text ?? string.Empty));
     }
 
     [AvaloniaTest]
@@ -131,7 +146,7 @@ internal sealed class MarkdownImageTests
         var navigator = new TestSupport.RecordingNavigator();
         IImageLoader loader = Substitute.For<IImageLoader>();
         loader.LoadPictureAsync(Arg.Any<WebLink>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
-            .Returns(Still());
+            .Returns(PictureLoad.Loaded(Still()));
 
         var open = new CommunityToolkit.Mvvm.Input.RelayCommand<MarkdownImage>(
             image => navigator.ShowPicture(image!.Source, image.AltText));
@@ -170,7 +185,7 @@ internal sealed class MarkdownImageTests
     {
         IImageLoader loader = Substitute.For<IImageLoader>();
         AnimatedImage moving = Moving();
-        loader.LoadPictureAsync(Arg.Any<WebLink>(), Arg.Any<int>(), Arg.Any<CancellationToken>()).Returns(moving);
+        loader.LoadPictureAsync(Arg.Any<WebLink>(), Arg.Any<int>(), Arg.Any<CancellationToken>()).Returns(PictureLoad.Loaded(moving));
 
         (_, Window window) = Show(new MarkdownMedia(loader, null));
         Expander(window).IsExpanded = true;

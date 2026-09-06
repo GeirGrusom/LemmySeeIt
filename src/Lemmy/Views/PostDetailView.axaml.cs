@@ -10,4 +10,8 @@ public sealed partial class PostDetailView : UserControl
     public PostDetailView() => InitializeComponent();
 
     private void InitializeComponent() => AvaloniaXamlLoader.Load(this);
+
+    /// <summary>Answers the pull-to-refresh gesture.</summary>
+    private void OnRefreshRequested(object? sender, RefreshRequestedEventArgs e) =>
+        RefreshGesture.Begin(DataContext, e);
 }

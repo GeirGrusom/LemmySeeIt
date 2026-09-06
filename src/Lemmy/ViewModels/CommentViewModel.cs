@@ -12,66 +12,50 @@ using Lemmy.Services;
 namespace Lemmy.ViewModels;
 
 /// <summary>
-/// One comment and its replies. Replies are materialised eagerly because the thread arrives in one
-/// response; what is deferred is drawing them, via <see cref="IsCollapsed"/>.
+/// One comment and its replies. Replies that arrived with the thread are materialised eagerly, and
+/// what is deferred is drawing them, via <see cref="IsCollapsed"/>. Replies the server did not send
+/// — a thread runs deeper than one request goes — are fetched on demand by
+/// <see cref="LoadMoreRepliesCommand"/>.
 /// </summary>
 public sealed partial class CommentViewModel : ViewModelBase
 {
-    private readonly ILemmyApi api;
-    private readonly CurrentAccount account;
-    private readonly MarkdownMedia media;
-    private readonly ITextCopier copier;
-    private readonly INavigator navigator;
-    private readonly DateTimeOffset now;
-    private readonly ICommand? linkCommand;
+    private readonly CommentContext context;
+
+    /// <summary>
+    /// The comment this one replies to, or <see langword="null"/> at the top of a thread. Needed
+    /// because a reply arriving anywhere counts towards the missing-reply total of every comment
+    /// above it, and those are the ones already on screen saying what is missing.
+    /// </summary>
+    private CommentViewModel? parent;
+
+    /// <summary>Whether asking again could bring anything; see <see cref="LoadMoreRepliesAsync"/>.</summary>
+    private bool repliesExhausted;
 
     /// <summary>Wraps a comment for display.</summary>
-    /// <param name="node">The comment and its replies.</param>
-    /// <param name="now">The current time, for the age label.</param>
-    /// <param name="api">The client this comment and its replies vote through.</param>
-    /// <param name="media">How pictures written into the comment are fetched and opened.</param>
-    /// <param name="navigator">Where the author's name leads.</param>
-    /// <param name="linkCommand">
-    /// Opens a link pressed inside the comment. Passed down the tree rather than resolved per
-    /// comment: a thread is hundreds of these, and they all open links the same way.
-    /// </param>
-    public CommentViewModel(
-        CommentNode node,
-        DateTimeOffset now,
-        ILemmyApi api,
-        CurrentAccount account,
-        MarkdownMedia media,
-        ITextCopier copier,
-        INavigator navigator,
-        ICommand? linkCommand = null)
+    /// <param name="node">The comment and the replies that arrived with it.</param>
+    /// <param name="context">What every comment in the thread shares.</param>
+    public CommentViewModel(CommentNode node, CommentContext context)
     {
         ArgumentNullException.ThrowIfNull(node);
-        ArgumentNullException.ThrowIfNull(api);
-        ArgumentNullException.ThrowIfNull(account);
-        ArgumentNullException.ThrowIfNull(media);
-        ArgumentNullException.ThrowIfNull(copier);
-        ArgumentNullException.ThrowIfNull(navigator);
+        ArgumentNullException.ThrowIfNull(context);
 
-        this.api = api;
-        this.account = account;
-        this.media = media;
-        this.copier = copier;
-        this.navigator = navigator;
-        this.now = now;
-        this.linkCommand = linkCommand;
+        this.context = context;
 
-        Media = media;
+        Media = context.Media;
         Node = node;
-        LinkCommand = linkCommand;
-        AgeLabel = RelativeTime.Format(node.Comment.Published, now);
+        LinkCommand = context.LinkCommand;
+        AgeLabel = RelativeTime.Format(node.Comment.Published, context.Now);
         Content = MarkdownParser.Parse(node.Comment.VisibleContent);
         Votes = new VoteBarViewModel(
             new VoteOutcome(node.MyVote, node.Tally.Score, node.Tally.Upvotes, node.Tally.Downvotes),
-            api.IsAuthenticated,
-            (vote, token) => api.VoteOnCommentAsync(node.Comment.Id, vote, token));
+            context.Api.IsAuthenticated,
+            (vote, token) => context.Api.VoteOnCommentAsync(node.Comment.Id, vote, token));
 
-        Replies = new ObservableCollection<CommentViewModel>(
-            node.Replies.Select(reply => new CommentViewModel(reply, now, api, account, media, copier, navigator, linkCommand)));
+        Replies = [];
+        foreach (CommentNode reply in node.Replies)
+        {
+            Replies.Add(new CommentViewModel(reply, context) { parent = this });
+        }
     }
 
     /// <summary>The comment and its replies.</summary>
@@ -97,7 +81,7 @@ public sealed partial class CommentViewModel : ViewModelBase
 
     /// <summary>Opens the author's page.</summary>
     [RelayCommand]
-    private void OpenAuthor() => navigator.ShowProfile(Node.Creator.Id);
+    private void OpenAuthor() => context.Navigator.ShowProfile(Node.Creator.Id);
 
     /// <summary>How long ago the comment was made.</summary>
     public string AgeLabel { get; }
@@ -114,12 +98,25 @@ public sealed partial class CommentViewModel : ViewModelBase
     /// <summary>Whether the comment has replies to show.</summary>
     public bool HasReplies => Replies.Count > 0;
 
-    /// <summary>Whether the server said there are replies it did not send.</summary>
-    public bool HasUnloadedReplies => Node.UnloadedReplyCount > 0;
+    /// <summary>
+    /// Whether there are replies left to fetch. Goes false once a fetch comes back with nothing
+    /// new, whatever the count still says.
+    /// </summary>
+    public bool HasUnloadedReplies => !repliesExhausted && Node.UnloadedReplyCount > 0;
 
-    /// <summary>How that reads, e.g. <c>12 more replies</c>.</summary>
-    public string UnloadedRepliesLabel =>
-        Node.UnloadedReplyCount == 1 ? "1 more reply" : $"{Node.UnloadedReplyCount} more replies";
+    /// <summary>How that reads on the control that fetches them, e.g. <c>Show 12 more replies</c>.</summary>
+    public string UnloadedRepliesLabel => IsLoadingReplies
+        ? "Loading replies…"
+        : Node.UnloadedReplyCount == 1 ? "Show 1 more reply" : $"Show {Node.UnloadedReplyCount} more replies";
+
+    /// <summary>Set while the missing replies are being fetched.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(UnloadedRepliesLabel))]
+    private bool isLoadingReplies;
+
+    /// <summary>Why the last attempt to fetch the missing replies failed, or <see langword="null"/>.</summary>
+    [ObservableProperty]
+    private string? repliesError;
 
     /// <summary>Whether the replies are folded away.</summary>
     [ObservableProperty]
@@ -134,7 +131,7 @@ public sealed partial class CommentViewModel : ViewModelBase
     private void ToggleCollapsed() => IsCollapsed = !IsCollapsed;
 
     /// <summary>Whether this comment is the reader's own, and so theirs to change.</summary>
-    public bool IsOwn => account.Owns(Node.Comment.CreatorId);
+    public bool IsOwn => context.Account.Owns(Node.Comment.CreatorId);
 
     /// <summary>Whether the author has deleted it.</summary>
     public bool IsDeleted => Node.Comment.IsDeleted;
@@ -146,7 +143,7 @@ public sealed partial class CommentViewModel : ViewModelBase
     public bool CanRestore => IsOwn && IsDeleted;
 
     /// <summary>Whether anybody is signed in to reply at all.</summary>
-    public bool CanReply => api.IsAuthenticated && !IsDeleted;
+    public bool CanReply => context.Api.IsAuthenticated && !IsDeleted;
 
     /// <summary>Whether the comment has been edited since it was posted.</summary>
     public bool WasEdited => Node.Comment.Updated is not null;
@@ -169,7 +166,7 @@ public sealed partial class CommentViewModel : ViewModelBase
     /// </summary>
     [RelayCommand]
     private async Task CopyAsync() =>
-        WasCopied = await copier.CopyAsync(Node.Comment.Content.Value).ConfigureAwait(true);
+        WasCopied = await context.Copier.CopyAsync(Node.Comment.Content.Value).ConfigureAwait(true);
 
     /// <summary>Set once a copy succeeds, so the button can say it worked.</summary>
     [ObservableProperty]
@@ -195,6 +192,65 @@ public sealed partial class CommentViewModel : ViewModelBase
             () => Composer = null,
             Node.Comment.Content.Value);
 
+    /// <summary>
+    /// Fetches the replies the server said exist but did not send. Lemmy answers a whole thread in
+    /// one request but only down to a fixed depth, so a long back-and-forth is cut off partway and
+    /// has to be asked for again from the comment it was cut at.
+    /// </summary>
+    [RelayCommand]
+    private async Task LoadMoreRepliesAsync(CancellationToken cancellationToken)
+    {
+        IsLoadingReplies = true;
+        RepliesError = null;
+
+        try
+        {
+            // Depth counts from this comment rather than from the post, so this reaches exactly as
+            // far below here as the first request reached below the post. The thread's own sort is
+            // carried along so what arrives is ordered like what is already on screen.
+            var query = new CommentQuery(
+                Node.Comment.PostId,
+                context.Sort,
+                CommentDepth.Default,
+                PageSize.Clamp(PageSize.Maximum),
+                Node.Comment.Id);
+
+            CommentThread fetched = await context.Api
+                .GetCommentsAsync(query, cancellationToken)
+                .ConfigureAwait(true);
+
+            // The response leads with this comment itself, which we already have; only what is
+            // below it is new.
+            int added = Absorb(fetched.Flatten());
+
+            // A count that will not come down means the rest is unreachable: the server counts
+            // replies it will not serve — ones a moderator removed, ones from a blocked account.
+            // Offering to fetch them a second time would only fail the same way.
+            repliesExhausted = added == 0;
+
+            if (added > 0)
+            {
+                IsCollapsed = false;
+            }
+
+            // From the top of the thread rather than from here: a reply filed below this comment
+            // is also one of the replies every comment above it was still counting as missing.
+            Root().Resync();
+        }
+        catch (OperationCanceledException)
+        {
+            // The page went away.
+        }
+        catch (LemmyApiException exception)
+        {
+            RepliesError = exception.Message;
+        }
+        finally
+        {
+            IsLoadingReplies = false;
+        }
+    }
+
     /// <summary>Deletes this comment, or puts it back if it is already deleted.</summary>
     [RelayCommand]
     private async Task ToggleDeletedAsync(CancellationToken cancellationToken)
@@ -205,7 +261,7 @@ public sealed partial class CommentViewModel : ViewModelBase
 
         try
         {
-            Comment updated = await api
+            Comment updated = await context.Api
                 .SetCommentDeletedAsync(Node.Comment.Id, deleted, cancellationToken)
                 .ConfigureAwait(true);
 
@@ -225,24 +281,120 @@ public sealed partial class CommentViewModel : ViewModelBase
         }
     }
 
+    /// <summary>
+    /// Files each fetched comment under the one it replies to, wherever in this sub-thread that is,
+    /// and answers how many were new. Placement goes by <see cref="CommentPath"/> rather than by the
+    /// shape of the response, because a comment can arrive before the parent it belongs under.
+    /// </summary>
+    private int Absorb(ImmutableArray<CommentNode> arrivals)
+    {
+        var hosts = new Dictionary<CommentId, CommentViewModel>();
+        Index(hosts);
+
+        var pending = new List<CommentNode>(arrivals.Length);
+        foreach (CommentNode arrival in arrivals)
+        {
+            // Already on screen: a fetch always returns the comment it was asked about, and a
+            // repeat fetch returns replies we placed the first time.
+            if (!hosts.ContainsKey(arrival.Id))
+            {
+                pending.Add(arrival);
+            }
+        }
+
+        int added = 0;
+        while (pending.Count > 0)
+        {
+            var deferred = new List<CommentNode>();
+
+            foreach (CommentNode arrival in pending)
+            {
+                if (arrival.Comment.Path.ParentId is not { } parentId
+                    || !hosts.TryGetValue(parentId, out CommentViewModel? host))
+                {
+                    deferred.Add(arrival);
+                    continue;
+                }
+
+                // Stripped of its own replies: those arrive as entries of their own and are placed
+                // under it on this pass or the next, so keeping them here would file them twice.
+                var child = new CommentViewModel(arrival with { Replies = [] }, context) { parent = host };
+                host.Replies.Add(child);
+                hosts[arrival.Id] = child;
+                added++;
+            }
+
+            // Nothing found a home this pass, and another pass would not either: what is left
+            // hangs off a comment that did not arrive.
+            if (deferred.Count == pending.Count)
+            {
+                break;
+            }
+
+            pending = deferred;
+        }
+
+        return added;
+    }
+
+    /// <summary>The comment at the top of this one's thread, which is this one when it is a root.</summary>
+    private CommentViewModel Root()
+    {
+        CommentViewModel top = this;
+        while (top.parent is { } above)
+        {
+            top = above;
+        }
+
+        return top;
+    }
+
+    /// <summary>Collects this comment and everything below it, so arrivals can be filed under any of them.</summary>
+    private void Index(Dictionary<CommentId, CommentViewModel> hosts)
+    {
+        hosts[Node.Comment.Id] = this;
+        foreach (CommentViewModel reply in Replies)
+        {
+            reply.Index(hosts);
+        }
+    }
+
+    /// <summary>
+    /// Puts the nodes back in step with the view models below them, deepest first, so that the
+    /// count of replies still missing is worked out from what is actually on screen.
+    /// </summary>
+    private void Resync()
+    {
+        foreach (CommentViewModel reply in Replies)
+        {
+            reply.Resync();
+        }
+
+        Node = Node with { Replies = [.. Replies.Select(reply => reply.Node)] };
+
+        OnPropertyChanged(nameof(Node));
+        OnPropertyChanged(nameof(HasReplies));
+        OnPropertyChanged(nameof(HasUnloadedReplies));
+        OnPropertyChanged(nameof(UnloadedRepliesLabel));
+    }
+
     private async Task PostReplyAsync(CommentDraft draft, CancellationToken cancellationToken)
     {
-        CommentNode reply = await api
+        CommentNode reply = await context.Api
             .CreateCommentAsync(Node.Comment.PostId, Node.Comment.Id, draft, cancellationToken)
             .ConfigureAwait(true);
 
         // Newest first, and at the top where it can be seen: the thread's sort is the server's
         // opinion of a comment that did not exist when it was asked.
-        Replies.Insert(0, new CommentViewModel(reply, now, api, account, media, copier, navigator, linkCommand));
+        Replies.Insert(0, new CommentViewModel(reply, context) { parent = this });
 
         IsCollapsed = false;
-        OnPropertyChanged(nameof(HasReplies));
-        OnPropertyChanged(nameof(HasUnloadedReplies));
+        Root().Resync();
     }
 
     private async Task SaveEditAsync(CommentDraft draft, CancellationToken cancellationToken)
     {
-        Comment updated = await api
+        Comment updated = await context.Api
             .EditCommentAsync(Node.Comment.Id, draft, cancellationToken)
             .ConfigureAwait(true);
 

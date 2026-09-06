@@ -123,13 +123,14 @@
     </Style>
 
     <!-- The image viewer's previous/next controls. -->
-    <!-- Deliberately understated: on a phone the swipe is the gesture and these are only a hint
-         that there is anywhere to swipe to, so they must not compete with the artwork. -->
+    <!-- Deliberately understated: on a phone the flick is the gesture and these are only a hint
+         that there is anywhere to flick to, so they must not compete with the artwork. Wide and
+         short, because they sit above and below the picture rather than beside it. -->
     <Style Selector="Button.stepper">
         <Setter Property="Foreground" Value="#D9FFFFFF" />
         <Setter Property="FontSize" Value="26" />
-        <Setter Property="Padding" Value="8,16" />
-        <Setter Property="Margin" Value="6,0" />
+        <Setter Property="Padding" Value="20,2" />
+        <Setter Property="Margin" Value="0,10" />
         <Setter Property="Background" Value="#40000000" />
         <Setter Property="CornerRadius" Value="20" />
         <Setter Property="VerticalContentAlignment" Value="Center" />

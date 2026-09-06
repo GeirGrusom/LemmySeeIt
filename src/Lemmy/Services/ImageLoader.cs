@@ -77,11 +77,13 @@ public sealed class ImageLoader : IImageLoader, IDisposable
     }
 
     /// <inheritdoc />
-    public async Task<AnimatedImage?> LoadPictureAsync(WebLink link, int decodeWidth, CancellationToken cancellationToken = default)
+    public async Task<PictureLoad> LoadPictureAsync(WebLink link, int decodeWidth, CancellationToken cancellationToken = default)
     {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(decodeWidth);
 
-        return link.IsValid ? await DownloadPictureAsync(link, decodeWidth, cancellationToken).ConfigureAwait(false) : null;
+        return link.IsValid
+            ? await DownloadPictureAsync(link, decodeWidth, cancellationToken).ConfigureAwait(false)
+            : PictureLoad.Unreachable;
     }
 
     /// <inheritdoc />
@@ -107,11 +109,20 @@ public sealed class ImageLoader : IImageLoader, IDisposable
         return bytes is null ? null : AnimatedImageDecoder.DecodeStillFrame(bytes, decodeWidth);
     }
 
-    private async Task<AnimatedImage?> DownloadPictureAsync(WebLink link, int decodeWidth, CancellationToken cancellationToken)
+    private async Task<PictureLoad> DownloadPictureAsync(WebLink link, int decodeWidth, CancellationToken cancellationToken)
     {
         byte[]? bytes = await FetchAsync(link, cancellationToken).ConfigureAwait(false);
+        if (bytes is null)
+        {
+            return PictureLoad.Unreachable;
+        }
 
-        return bytes is null ? null : AnimatedImageDecoder.Decode(bytes, decodeWidth);
+        AnimatedImage? decoded = AnimatedImageDecoder.Decode(bytes, decodeWidth);
+
+        // Only asked once the decoder has already given up, and asked of the bytes rather than of
+        // the server: an instance whose pict-rs is set to AVIF serves AVIF under a .avif URL and an
+        // image/avif header, and one whose proxy strips both still serves the same bytes.
+        return decoded is null ? PictureLoad.CannotDecode(ImageSignature.NameOf(bytes)) : PictureLoad.Loaded(decoded);
     }
 
     /// <summary>

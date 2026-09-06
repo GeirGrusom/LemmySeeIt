@@ -16,12 +16,11 @@ internal sealed class CopyTextTests
     private static CommentViewModel Comment(TestServices services, CommentNode? node = null) =>
         new(
             node ?? Sample.CommentNode(),
-            FixedTimeProvider.Reference,
-            services.Api,
-            services.Services.Account,
-            new MarkdownMedia(services.ImageLoader, null),
-            services.Copier,
-            new RecordingNavigator());
+            Threads.Context(
+                services.Api,
+                services.Services.Account,
+                services.Copier,
+                new MarkdownMedia(services.ImageLoader, null)));
 
     [Test]
     public async Task CopyingACommentPutsTheMarkdownOnTheClipboard()

@@ -22,7 +22,10 @@ internal sealed class ImageCodecTests
     private static string Asset(string name) =>
         Path.Combine(TestContext.CurrentContext.TestDirectory, "TestAssets", name);
 
-    private static async Task<AnimatedImage?> LoadThroughTheAppAsync(string assetName)
+    private static async Task<AnimatedImage?> LoadThroughTheAppAsync(string assetName) =>
+        (await LoadResultAsync(assetName)).Picture;
+
+    private static async Task<PictureLoad> LoadResultAsync(string assetName)
     {
         byte[] bytes = await File.ReadAllBytesAsync(Asset(assetName));
 
@@ -88,6 +91,55 @@ internal sealed class ImageCodecTests
         {
             Assert.That(thrown, Is.Null, "an undecodable picture is a result, not an error");
             Assert.That(picture, Is.Null);
+        });
+    }
+
+    /// <summary>
+    /// The whole path with real bytes: the loader has to say which format defeated it, or the
+    /// reader is told the same thing for an AVIF as for a dead link and cannot tell the difference
+    /// between "never going to work" and "try again".
+    /// </summary>
+    [AvaloniaTest]
+    public async Task AnUndecodableFormatIsNamedRatherThanLumpedInWithEveryOtherFailure()
+    {
+        PictureLoad load = await LoadResultAsync("sample.avif");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(load.Failure, Is.EqualTo(ImageFailure.UnsupportedFormat));
+            Assert.That(load.FormatName, Is.EqualTo("AVIF"));
+            Assert.That(load.Message, Is.EqualTo("That picture is an AVIF, which this app cannot show."));
+        });
+    }
+
+    [AvaloniaTest]
+    public async Task APictureThatDecodesReportsNoFailure()
+    {
+        PictureLoad load = await LoadResultAsync("sample.jpg");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(load.Succeeded, Is.True);
+            Assert.That(load.Failure, Is.EqualTo(ImageFailure.None));
+            Assert.That(load.Message, Is.Empty);
+        });
+
+        load.Picture?.Dispose();
+    }
+
+    /// <summary>A link that answers with nothing usable is a different problem from a bad format.</summary>
+    [AvaloniaTest]
+    public async Task AnUnreachablePictureIsToldApartFromAnUndecodableOne()
+    {
+        using var handler = new StubHttpMessageHandler(_ => new HttpResponseMessage(HttpStatusCode.NotFound));
+        using var loader = new ImageLoader(handler.CreateClient());
+
+        PictureLoad load = await loader.LoadPictureAsync(WebLink.Parse("https://example.com/gone.png"), 400);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(load.Failure, Is.EqualTo(ImageFailure.Unreachable));
+            Assert.That(load.Message, Does.Contain("could not be downloaded"));
         });
     }
 
@@ -274,8 +326,8 @@ internal sealed class ImageCodecTests
         });
         using var loader = new ImageLoader(handler.CreateClient());
 
-        using AnimatedImage? picture = await loader.LoadPictureAsync(WebLink.Parse("https://example.com/image"), 400);
+        PictureLoad load = await loader.LoadPictureAsync(WebLink.Parse("https://example.com/image"), 400);
 
-        Assert.That(picture, Is.Null);
+        Assert.That(load.Picture, Is.Null);
     }
 }

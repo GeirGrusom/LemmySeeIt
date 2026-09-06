@@ -1,4 +1,7 @@
+using Avalonia;
+using Avalonia.Headless.NUnit;
 using Avalonia.Media.Imaging;
+using Avalonia.Platform;
 using Lemmy.Domain;
 using Lemmy.Domain.Models;
 using Lemmy.Services;
@@ -149,7 +152,7 @@ internal sealed class ImageViewerTests
     public async Task AnImageThatCannotBeLoadedSaysSoRatherThanHangingOnASpinner()
     {
         services.ImageLoader.LoadPictureAsync(Arg.Any<WebLink>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
-            .Returns(Task.FromResult<AnimatedImage?>(null));
+            .Returns(Task.FromResult(PictureLoad.Unreachable));
         using MainViewModel shell = CreateShell();
         await shell.InitialiseAsync();
 
@@ -181,7 +184,7 @@ internal sealed class ImageViewerTests
         services.ImageLoader
             .LoadPictureAsync(Arg.Is<WebLink>(link => link.Value.EndsWith(".avif", StringComparison.Ordinal)),
                 Arg.Any<int>(), Arg.Any<CancellationToken>())
-            .Returns(Task.FromResult<AnimatedImage?>(null));
+            .Returns(Task.FromResult(PictureLoad.Unreachable));
 
         using MainViewModel shell = CreateShell();
         await shell.InitialiseAsync();
@@ -196,11 +199,86 @@ internal sealed class ImageViewerTests
             Arg.Any<CancellationToken>());
     }
 
+    /// <summary>
+    /// An instance whose pict-rs is configured for AVIF serves the thumbnail as AVIF too, so both
+    /// attempts fail for the same reason. That reason is the original's, and it is the one worth
+    /// putting on screen — the reader should be told the format is the problem, not that their
+    /// connection is.
+    /// </summary>
+    [Test]
+    public async Task WhenThePreviewIsTheSameUnreadableFormatTheOriginalsReasonIsTheOneReported()
+    {
+        PostSummary post = Sample.PostSummary() with
+        {
+            Post = Sample.Post(url: "https://example.com/art.avif", contentType: "image/avif") with
+            {
+                Thumbnail = WebLink.Parse("https://example.com/art-thumb.avif"),
+            },
+        };
+
+        services.ImageLoader
+            .LoadPictureAsync(Arg.Is<WebLink>(link => link.Value.EndsWith(".avif", StringComparison.Ordinal)),
+                Arg.Any<int>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(PictureLoad.CannotDecode("AVIF")));
+
+        using MainViewModel shell = CreateShell();
+        await shell.InitialiseAsync();
+        shell.ShowImage(post, new StubGallery(post));
+        await shell.ImageViewer!.LoadAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(shell.ImageViewer!.HasFailed, Is.True);
+            Assert.That(shell.ImageViewer!.FailureMessage, Does.Contain("an AVIF"));
+            Assert.That(shell.ImageViewer!.IsShowingReducedQuality, Is.False);
+        });
+    }
+
+    /// <summary>A picture the preview rescued must not be left carrying the original's complaint.</summary>
+    [AvaloniaTest]
+    public async Task APreviewThatWorksClearsTheOriginalsComplaint()
+    {
+        PostSummary post = Sample.PostSummary() with
+        {
+            Post = Sample.Post(url: "https://example.com/art.avif", contentType: "image/avif") with
+            {
+                Thumbnail = WebLink.Parse("https://example.com/art-thumb.jpeg"),
+            },
+        };
+
+        using var preview = new AnimatedImage([
+            new AnimationFrame(
+                new WriteableBitmap(new PixelSize(8, 8), new Vector(96, 96), PixelFormat.Bgra8888, AlphaFormat.Premul),
+                TimeSpan.Zero),
+        ]);
+
+        services.ImageLoader
+            .LoadPictureAsync(Arg.Is<WebLink>(link => link.Value.EndsWith(".avif", StringComparison.Ordinal)),
+                Arg.Any<int>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(PictureLoad.CannotDecode("AVIF")));
+        services.ImageLoader
+            .LoadPictureAsync(Arg.Is<WebLink>(link => link.Value.EndsWith(".jpeg", StringComparison.Ordinal)),
+                Arg.Any<int>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(PictureLoad.Loaded(preview)));
+
+        using MainViewModel shell = CreateShell();
+        await shell.InitialiseAsync();
+        shell.ShowImage(post, new StubGallery(post));
+        await shell.ImageViewer!.LoadAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(shell.ImageViewer!.HasFailed, Is.False);
+            Assert.That(shell.ImageViewer!.FailureMessage, Is.Empty);
+            Assert.That(shell.ImageViewer!.IsShowingReducedQuality, Is.True);
+        });
+    }
+
     [Test]
     public async Task WhenNeitherTheOriginalNorThePreviewDecodesTheViewerSaysSo()
     {
         services.ImageLoader.LoadPictureAsync(Arg.Any<WebLink>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
-            .Returns(Task.FromResult<AnimatedImage?>(null));
+            .Returns(Task.FromResult(PictureLoad.Unreachable));
 
         using MainViewModel shell = CreateShell();
         await shell.InitialiseAsync();

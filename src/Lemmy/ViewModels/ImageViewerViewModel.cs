@@ -176,6 +176,14 @@ public sealed partial class ImageViewerViewModel : ViewModelBase, IDisposable
     [ObservableProperty]
     private bool isLoadingMore;
 
+    /// <summary>
+    /// What to say when there is no picture. Comes from the loader rather than being a fixed line,
+    /// because "this app cannot show AVIF" and "that did not download" are different problems and
+    /// only one of them is worth trying again.
+    /// </summary>
+    [ObservableProperty]
+    private string failureMessage = string.Empty;
+
     /// <summary>Fetches the current picture at full resolution.</summary>
     public async Task LoadAsync()
     {
@@ -185,6 +193,7 @@ public sealed partial class ImageViewerViewModel : ViewModelBase, IDisposable
         {
             IsLoading = false;
             HasFailed = true;
+            FailureMessage = PictureLoad.Unreachable.Message;
             return;
         }
 
@@ -210,17 +219,26 @@ public sealed partial class ImageViewerViewModel : ViewModelBase, IDisposable
         IsLoading = true;
         HasFailed = false;
 
-        AnimatedImage? loaded = await imageLoader.LoadPictureAsync(link, DecodeWidth, lifetime.Token).ConfigureAwait(true);
+        PictureLoad load = await imageLoader.LoadPictureAsync(link, DecodeWidth, lifetime.Token).ConfigureAwait(true);
         bool isReduced = false;
 
         // Some originals are in formats the platform cannot decode — AVIF is the one that turns up
-        // in practice. The server's own thumbnail is always in a format it can, so a softer picture
-        // beats no picture; the caption says so rather than pretending it is the real thing.
-        if (loaded is null && Summary?.Post.Thumbnail is { } thumbnail && thumbnail != link)
+        // in practice. The server's own thumbnail is often in a format it can, so a softer picture
+        // beats no picture; the caption says so rather than pretending it is the real thing. It is
+        // not always: an instance that has set pict-rs to AVIF serves the thumbnail as AVIF too, and
+        // then both attempts fail for the same reason — which is the reason worth reporting, so the
+        // original's is the one kept.
+        if (!load.Succeeded && Summary?.Post.Thumbnail is { } thumbnail && thumbnail != link)
         {
-            loaded = await imageLoader.LoadPictureAsync(thumbnail, DecodeWidth, lifetime.Token).ConfigureAwait(true);
-            isReduced = loaded is not null;
+            PictureLoad preview = await imageLoader.LoadPictureAsync(thumbnail, DecodeWidth, lifetime.Token).ConfigureAwait(true);
+            if (preview.Succeeded)
+            {
+                load = preview;
+                isReduced = true;
+            }
         }
+
+        AnimatedImage? loaded = load.Picture;
 
         // A faster flick than the network: this picture is no longer the one on screen.
         if (isDisposed || generation != loadGeneration)
@@ -236,6 +254,7 @@ public sealed partial class ImageViewerViewModel : ViewModelBase, IDisposable
         IsAnimated = loaded?.IsAnimated ?? false;
         IsShowingReducedQuality = isReduced;
         HasFailed = loaded is null;
+        FailureMessage = load.Message;
         IsLoading = false;
 
         StartPrefetch();
@@ -324,9 +343,11 @@ public sealed partial class ImageViewerViewModel : ViewModelBase, IDisposable
 
     private async Task PrefetchAsync(WebLink link, PostId id, CancellationToken cancellationToken)
     {
-        AnimatedImage? loaded = await imageLoader.LoadPictureAsync(link, DecodeWidth, cancellationToken).ConfigureAwait(true);
+        PictureLoad load = await imageLoader.LoadPictureAsync(link, DecodeWidth, cancellationToken).ConfigureAwait(true);
 
-        if (loaded is null)
+        // Nothing is said about a failed prefetch: the reader is still looking at another picture,
+        // and the one they were heading towards will report for itself if they get there.
+        if (load.Picture is not { } loaded)
         {
             return;
         }

@@ -164,6 +164,24 @@ internal sealed class LemmyApiClientTests
             Is.EqualTo("?post_id=10&sort=Top&max_depth=6&limit=50&type_=All"));
     }
 
+    /// <summary>
+    /// Fetching what is below one comment. The depth counts from that comment rather than from the
+    /// post, so the same number reaches as far below the cut as the first request reached below the
+    /// post — asking for depth 8 from a comment at depth 8 returns comments down to depth 16.
+    /// </summary>
+    [Test]
+    public async Task GetCommentsAsync_AnchorsOnAParentWhenAskedForASubThread()
+    {
+        using var handler = StubHttpMessageHandler.Returning(WireFixtures.CommentSubThread);
+
+        await CreateClient(handler).GetCommentsAsync(
+            new CommentQuery(new PostId(10), CommentSortType.Top, CommentDepth.Clamp(6), PageSize.Clamp(50), new CommentId(200)));
+
+        Assert.That(
+            handler.SingleRequestedUri.Query,
+            Is.EqualTo("?post_id=10&sort=Top&max_depth=6&limit=50&type_=All&parent_id=200"));
+    }
+
     [Test]
     public async Task GetCommentsAsync_BuildsTheTreeFromThePaths()
     {

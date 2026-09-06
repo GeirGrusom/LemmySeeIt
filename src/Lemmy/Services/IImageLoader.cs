@@ -19,5 +19,9 @@ public interface IImageLoader
     /// and would be a memory problem for full-resolution pictures and their frames. The caller owns
     /// the result and must dispose it.
     /// </summary>
-    Task<AnimatedImage?> LoadPictureAsync(WebLink link, int decodeWidth, CancellationToken cancellationToken = default);
+    /// <returns>
+    /// The picture, or why there isn't one. Unlike <see cref="LoadAsync"/> this reports the reason,
+    /// because both of its callers have somewhere to put it.
+    /// </returns>
+    Task<PictureLoad> LoadPictureAsync(WebLink link, int decodeWidth, CancellationToken cancellationToken = default);
 }

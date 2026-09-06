@@ -137,10 +137,11 @@ it full screen with pinch-zoom. Nothing is downloaded until you ask for it, so a
 images costs nothing to scroll past.
 
 **Pictures.** Tap the thumbnail on a feed row to open the picture full screen without opening the
-post. Double-tap or pinch to zoom, drag to pan, and flick left and right to move through the other
-pictures on the page — the feed keeps loading as you reach the end, so a comic or art community
+post. Double-tap or pinch to zoom, drag to pan, and flick up and down to move through the other
+pictures on the page — the same direction the feed itself scrolls, and the controls sit above and
+below the picture to match. The feed keeps loading as you reach the end, so a comic or art community
 reads a picture at a time. GIFs and animated WebP play here. Tap, press Escape or go back to close;
-arrow keys work on the desktop heads.
+the up and down arrow keys work on the desktop heads.
 
 **Subscribing.** Signed in, the community directory, a community's own page, a post page and search
 results all carry a subscribe button. Following a community on another server usually reads
@@ -196,9 +197,12 @@ images until tapped. Signing in adopts whatever your account already has set.
   already hosted somewhere.
 - Editing or deleting a post updates the post's own page; a feed already on screen behind it still
   shows what it showed before until refreshed.
-- AVIF images do not decode, so those posts show the server's preview rather than the original.
-- A comment thread is fetched eight levels deep in one request; "12 more replies" is shown but not
-  yet loadable, and the thread has no pull-to-refresh.
+- AVIF images do not decode. Most posts fall back to the server's preview; on an instance whose
+  pict-rs is set to AVIF the preview is AVIF too, and the picture then says which format defeated it
+  rather than claiming it could not be loaded.
+- A comment thread is fetched eight levels deep in one request. Deeper replies are fetched on
+  demand — the count of what is missing is the control that fetches it. Pulling the page down
+  re-reads the thread; the post above it keeps the counts it arrived with.
 - `@user@instance` and `!community@instance` mentions are not linkified.
 - The iOS head keeps a session in memory only — it has no keychain support yet, so signing in does
   not survive a restart there.

@@ -23,12 +23,42 @@ switches which side is fetched. More than one would be memory spent on pictures 
 reached, and an oversized neighbour is measured and dropped rather than kept, because holding two
 full-resolution scans at once is how a phone kills the app mid-scroll.
 
-Once open, flick left and right to move through the other pictures on the page without going back
-to it — the counter in the caption says where you are, and arrow keys work on the desktop heads. The
-list is re-read from the page on every move rather than snapshotted when the viewer opened, so
-pictures the feed has loaded in the meantime are there to flick to; freezing it would strand the
-reader at whatever happened to be loaded when they tapped. A flick only turns the page when the
-picture is not zoomed: zoomed in, the same drag pans, because that is how you read a tall comic.
+Once open, flick up and down to move through the other pictures on the page without going back to
+it — the counter in the caption says where you are, and the up and down arrow keys work on the
+desktop heads. The list is re-read from the page on every move rather than snapshotted when the
+viewer opened, so pictures the feed has loaded in the meantime are there to flick to; freezing it
+would strand the reader at whatever happened to be loaded when they tapped. A flick only turns the
+page when the picture is not zoomed: zoomed in, the same drag pans, because that is how you read a
+tall comic.
+
+The axis is vertical because that is the axis these pictures were already being read on: they are
+the posts of a feed, and a flick up brings the next one exactly as it does in the feed itself. It
+started out horizontal, which meant the reader changed direction to carry on going the same way.
+Moving it also leaves the horizontal axis unclaimed, and there is something waiting for it — a post
+can carry several pictures, and those belong across rather than down. A sideways drag and the left
+and right arrow keys therefore do nothing at all today rather than doing what up and down do; a
+gesture that means two things later is worse than one that means nothing now.
+
+Reading the flick lives in `Flick`, next to `ZoomState` and for the same reason: which way a drag
+went and whether it went far enough is a decision, and deciding it should not need a finger on a
+screen.
+
+When a picture does not appear, the reason travels with the result rather than being worked out by
+whoever notices they got nothing — by then the bytes that would explain it are gone. Three answers
+are worth telling apart: it never downloaded, it downloaded and is in a format nothing here can
+decode, and it downloaded and is rubbish. The middle one is named from the file's own first bytes,
+because a reader who is told "could not be loaded" will keep trying an AVIF that is never going to
+work, and because the server's declared type is no help in exactly this case: an inline picture in a
+comment usually has none, and a picture that failed to decode is the case where what the server said
+cannot be trusted anyway.
+
+Sniffing is only ever asked *after* the platform decoder has given up. Deciding what to attempt from
+magic bytes instead would refuse things Skia can actually read.
+
+The AVIF fallback to the server's preview is not the whole answer, either. An instance that has set
+pict-rs to AVIF serves the thumbnail as AVIF as well, so both attempts fail for the same reason and
+there is nothing softer to show. The original's reason is the one reported, since "this app cannot
+show AVIF" is what the reader can act on and "the thumbnail did not load" is not.
 
 The zoom and pan arithmetic lives in `ZoomState`, a value type with no dependency on a control, so
 the part a reader feels but never sees is tested rather than eyeballed. Dismissal waits out the

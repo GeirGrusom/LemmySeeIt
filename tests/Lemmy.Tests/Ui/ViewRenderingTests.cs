@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
 using Avalonia.Controls;
+using CommunityToolkit.Mvvm.Input;
 using Avalonia.Interactivity;
 using Avalonia;
 using Avalonia.Headless;
@@ -24,6 +25,16 @@ namespace Lemmy.Tests.Ui;
 internal sealed class SingleImageGallery(PostSummary summary) : IImageGallery
 {
     public System.Collections.Immutable.ImmutableArray<PostSummary> Images { get; } = [summary];
+
+    public bool CanLoadMore => false;
+
+    public Task LoadMoreAsync() => Task.CompletedTask;
+}
+
+/// <summary>Several pictures to step between, for the gestures that do the stepping.</summary>
+internal sealed class FixedGallery(params PostSummary[] images) : IImageGallery
+{
+    public ImmutableArray<PostSummary> Images { get; } = [.. images];
 
     public bool CanLoadMore => false;
 
@@ -79,6 +90,22 @@ internal sealed class ViewRenderingTests
                 _ => null,
             })
             .Where(text => !string.IsNullOrEmpty(text))!;
+
+    /// <summary>Presses the button showing <paramref name="label"/>, and lets its command finish.</summary>
+    private static async Task PressAsync(Control root, string label)
+    {
+        Button button = Descendants(root)
+            .OfType<Button>()
+            .Single(candidate => Descendants(candidate).OfType<TextBlock>().Any(text => text.Text == label));
+
+        button.Command!.Execute(button.CommandParameter);
+        if (button.Command is IAsyncRelayCommand running)
+        {
+            await running.ExecutionTask!.ConfigureAwait(true);
+        }
+
+        Settle();
+    }
 
     private static async Task<FeedViewModel> LoadedFeedAsync(TestServices services)
     {
@@ -170,6 +197,36 @@ internal sealed class ViewRenderingTests
         Assert.That(
             Descendants(window).OfType<CommentView>().Count(view => view.IsEffectivelyVisible),
             Is.EqualTo(1));
+    }
+
+    /// <summary>
+    /// The whole path, through the real markup: a thread the server cut short draws a control
+    /// saying so, pressing it fetches what is below the cut, and the reply lands on screen nested
+    /// under the comment it answers.
+    /// </summary>
+    [AvaloniaTest]
+    public async Task PressingTheMissingReplyCountPutsThoseRepliesOnScreen()
+    {
+        var services = new TestServices();
+        services.Api.GetCommentsAsync(Arg.Is<Lemmy.Api.CommentQuery>(query => query.Parent == null), Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(new CommentThread([Sample.CommentNode(100, "0.100", 1)])));
+        services.Api.GetCommentsAsync(Arg.Is<Lemmy.Api.CommentQuery>(query => query.Parent == new CommentId(100)), Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(new CommentThread([Sample.CommentNode(200, "0.100.200")])));
+
+        using var page = new PostDetailViewModel(
+            services.Services, new RecordingNavigator(), services.Api, Sample.PostSummary(), AppSettings.Default);
+        await page.LoadAsync();
+        Window window = Show(new PostDetailView(), page);
+
+        Assert.That(VisibleText(window), Does.Contain("Show 1 more reply"));
+
+        await PressAsync(window, "Show 1 more reply");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(Descendants(window).OfType<CommentView>().Count(), Is.EqualTo(2), "the reply nests inside its parent");
+            Assert.That(VisibleText(window), Does.Not.Contain("Show 1 more reply"));
+        });
     }
 
     [AvaloniaTest]
@@ -305,6 +362,19 @@ internal sealed class ViewRenderingTests
         await services.Api.Received(2).GetCommunitiesAsync(Arg.Any<Lemmy.Api.CommunityQuery>(), Arg.Any<CancellationToken>());
     }
 
+    [AvaloniaTest]
+    public async Task PullingAPostDownRefetchesItsThread()
+    {
+        var services = new TestServices();
+        using PostDetailViewModel page = await LoadedPostAsync(services);
+        Window window = Show(new PostDetailView(), page);
+
+        Descendants(window).OfType<RefreshContainer>().Single().RequestRefresh();
+        Settle();
+
+        await services.Api.Received(2).GetCommentsAsync(Arg.Any<Lemmy.Api.CommentQuery>(), Arg.Any<CancellationToken>());
+    }
+
     /// <summary>
     /// The gesture stays off for mouse users: on desktop the toolbar button is the affordance, and
     /// a mouse drag that silently reloads the list would be a surprise.
@@ -386,6 +456,77 @@ internal sealed class ViewRenderingTests
         Settle();
 
         Assert.That(shell.ImageViewer, Is.Not.Null, "a second tap may still be coming");
+    }
+
+    /// <summary>
+    /// The gallery steps on the vertical axis, matching the feed the pictures came from. A drag
+    /// across it deliberately does nothing: that axis is for the pictures within one post.
+    /// </summary>
+    [AvaloniaTest]
+    public async Task TheGalleryStepsUpAndDownAndIgnoresSideways()
+    {
+        (MainViewModel shell, Window window) = await ShellShowingTwoPictures();
+        using MainViewModel _ = shell;
+
+        Drag(window, new Point(200, 600), new Point(200, 300));
+        Assert.That(shell.ImageViewer!.Title, Is.EqualTo("Picture two"), "a flick up brings the next one");
+
+        Drag(window, new Point(200, 300), new Point(200, 600));
+        Assert.That(shell.ImageViewer!.Title, Is.EqualTo("Picture one"), "and a flick down goes back");
+
+        Drag(window, new Point(500, 600), new Point(120, 600));
+        Assert.Multiple(() =>
+        {
+            Assert.That(shell.ImageViewer, Is.Not.Null, "a sideways drag is swallowed, not a dismissal");
+            Assert.That(shell.ImageViewer!.Title, Is.EqualTo("Picture one"));
+        });
+    }
+
+    /// <summary>The keys follow the flick, leaving left and right free for a post's own pictures.</summary>
+    [AvaloniaTest]
+    public async Task TheArrowKeysStepTheSameWayTheFlickDoes()
+    {
+        (MainViewModel shell, Window window) = await ShellShowingTwoPictures();
+        using MainViewModel _ = shell;
+
+        window.KeyPress(Key.Down, RawInputModifiers.None, PhysicalKey.ArrowDown, null);
+        Settle();
+        Assert.That(shell.ImageViewer!.Title, Is.EqualTo("Picture two"));
+
+        window.KeyPress(Key.Right, RawInputModifiers.None, PhysicalKey.ArrowRight, null);
+        Settle();
+        Assert.That(shell.ImageViewer!.Title, Is.EqualTo("Picture two"), "sideways is not the gallery's axis");
+
+        window.KeyPress(Key.Up, RawInputModifiers.None, PhysicalKey.ArrowUp, null);
+        Settle();
+        Assert.That(shell.ImageViewer!.Title, Is.EqualTo("Picture one"));
+    }
+
+    private static async Task<(MainViewModel Shell, Window Window)> ShellShowingTwoPictures()
+    {
+        var services = new TestServices();
+        services.FeedReturns(Sample.PostPage(3, null));
+        var shell = new MainViewModel(services.Services, AppSettings.Default);
+        await shell.InitialiseAsync();
+        Window window = Show(new MainView(), shell);
+
+        PostSummary first = Sample.ImagePostSummary(10, "Picture one");
+        PostSummary second = Sample.ImagePostSummary(11, "Picture two");
+        shell.ShowImage(first, new FixedGallery(first, second));
+        Settle();
+
+        Descendants(window).OfType<ImageViewerView>().Single().Focus();
+        Settle();
+        return (shell, window);
+    }
+
+    /// <summary>Presses, drags and releases, the way a finger does.</summary>
+    private static void Drag(Window window, Point from, Point to)
+    {
+        window.MouseDown(from, MouseButton.Left);
+        window.MouseMove(to, RawInputModifiers.LeftMouseButton);
+        window.MouseUp(to, MouseButton.Left);
+        Settle();
     }
 
     /// <summary>

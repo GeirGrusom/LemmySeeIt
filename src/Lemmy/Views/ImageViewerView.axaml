@@ -33,68 +33,85 @@
             <TextBlock Classes="body"
                        Foreground="White"
                        TextAlignment="Center"
-                       Text="That image could not be loaded." />
+                       TextWrapping="Wrap"
+                       MaxWidth="420"
+                       Text="{Binding FailureMessage}" />
             <Button Content="Close" HorizontalAlignment="Center" Command="{Binding CloseCommand}" />
         </StackPanel>
 
-        <!-- Step controls. A swipe does the same thing on a phone; these exist so the gallery is
-             discoverable at all, and so a mouse and a keyboard have something to aim at. -->
-        <Button Classes="link stepper"
-                HorizontalAlignment="Left"
-                VerticalAlignment="Center"
-                IsVisible="{Binding CanShowPrevious}"
-                Command="{Binding ShowPreviousCommand}"
-                ToolTip.Tip="Previous image"
-                Content="&#x2039;" />
+        <!-- Caption at the top, step controls below it. A DockPanel rather than free-floating
+             alignments: the previous control sits at the top of the picture now, and the caption is
+             already there, so the two have to be told about each other. -->
+        <DockPanel LastChildFill="True">
 
-        <Button Classes="link stepper"
-                HorizontalAlignment="Right"
-                VerticalAlignment="Center"
-                IsVisible="{Binding CanShowNext}"
-                Command="{Binding ShowNextCommand}"
-                ToolTip.Tip="Next image"
-                Content="&#x203A;" />
-
-        <!-- Caption and close, over the picture. -->
-        <Border VerticalAlignment="Top"
-                Background="#99000000"
-                Padding="12,10">
-            <Grid ColumnDefinitions="*,Auto">
-                <StackPanel Grid.Column="0" Spacing="2">
-                    <TextBlock Classes="title"
-                               Foreground="White"
-                               MaxLines="2"
-                               TextTrimming="CharacterEllipsis"
-                               Text="{Binding Title}" />
-                    <StackPanel Orientation="Horizontal" Spacing="8">
-                        <TextBlock Classes="meta"
-                                   Foreground="#CCFFFFFF"
-                                   Text="{Binding CommunityLabel}" />
-                        <TextBlock Classes="meta"
-                                   Foreground="#99FFFFFF"
-                                   Text="{Binding PositionLabel}" />
-                        <TextBlock Classes="meta"
-                                   Foreground="#99FFFFFF"
-                                   IsVisible="{Binding IsShowingReducedQuality}"
-                                   Text="preview quality" />
-                        <!-- The page is fetching more posts to carry on into. -->
-                        <ProgressBar IsIndeterminate="True"
-                                     Width="48"
-                                     Height="2"
-                                     VerticalAlignment="Center"
-                                     IsVisible="{Binding IsLoadingMore}" />
+            <!-- Caption and close, over the picture. -->
+            <Border DockPanel.Dock="Top"
+                    Background="#99000000"
+                    Padding="12,10">
+                <Grid ColumnDefinitions="*,Auto">
+                    <StackPanel Grid.Column="0" Spacing="2">
+                        <TextBlock Classes="title"
+                                   Foreground="White"
+                                   MaxLines="2"
+                                   TextTrimming="CharacterEllipsis"
+                                   Text="{Binding Title}" />
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <TextBlock Classes="meta"
+                                       Foreground="#CCFFFFFF"
+                                       Text="{Binding CommunityLabel}" />
+                            <TextBlock Classes="meta"
+                                       Foreground="#99FFFFFF"
+                                       Text="{Binding PositionLabel}" />
+                            <TextBlock Classes="meta"
+                                       Foreground="#99FFFFFF"
+                                       IsVisible="{Binding IsShowingReducedQuality}"
+                                       Text="preview quality" />
+                            <!-- The page is fetching more posts to carry on into. -->
+                            <ProgressBar IsIndeterminate="True"
+                                         Width="48"
+                                         Height="2"
+                                         VerticalAlignment="Center"
+                                         IsVisible="{Binding IsLoadingMore}" />
+                        </StackPanel>
                     </StackPanel>
-                </StackPanel>
-                <Button Grid.Column="1"
-                        Classes="link"
-                        Padding="10,4"
-                        FontSize="18"
-                        Foreground="White"
+                    <Button Grid.Column="1"
+                            Classes="link"
+                            Padding="10,4"
+                            FontSize="18"
+                            Foreground="White"
+                            VerticalAlignment="Top"
+                            ToolTip.Tip="Close"
+                            Content="&#x2715;"
+                            Command="{Binding CloseCommand}" />
+                </Grid>
+            </Border>
+
+            <!-- Step controls. A flick does the same thing on a phone; these exist so the gallery
+                 is discoverable at all, and so a mouse and a keyboard have something to aim at.
+                 The panel has no background, so only the buttons themselves take a tap and the
+                 picture behind them still dismisses on one. -->
+            <Panel>
+                <Button Classes="link stepper"
+                        HorizontalAlignment="Center"
                         VerticalAlignment="Top"
-                        ToolTip.Tip="Close"
-                        Content="&#x2715;"
-                        Command="{Binding CloseCommand}" />
-            </Grid>
-        </Border>
+                        IsVisible="{Binding CanShowPrevious}"
+                        Command="{Binding ShowPreviousCommand}"
+                        ToolTip.Tip="Previous image"
+                        Content="&#x2303;" />
+
+                <!-- The same glyph turned over rather than its downward twin: the two arrowheads
+                     come from a fallback font and are not drawn to match each other, which shows
+                     when they are on screen together. The pill behind it is symmetric, so the
+                     rotation is invisible on everything except the mark itself. -->
+                <Button Classes="link stepper"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Bottom"
+                        IsVisible="{Binding CanShowNext}"
+                        Command="{Binding ShowNextCommand}"
+                        ToolTip.Tip="Next image"
+                        RenderTransform="rotate(180deg)"
+                        Content="&#x2303;" />
+            </Panel>
+        </DockPanel>
     </Panel>
 </UserControl>

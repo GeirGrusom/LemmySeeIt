@@ -12,11 +12,17 @@ pill. Release builds are profiled-AOT and fully trimmed, and are what to sideloa
 
 ## Pull to refresh, on the surfaces that scroll
 
-The feed and the community directory are wrapped in a `RefreshContainer` that holds its deferral
-until the fetch actually finishes, so the spinner lasts as long as the work does. Both reload by
-fetching first and swapping second, which keeps the rows on screen through the round trip and means
-a refresh that fails costs the reader the update rather than the list. The gesture stays off for
-mouse users — on desktop the toolbar button is the affordance.
+The feed, the community directory and a post's comment thread are wrapped in a `RefreshContainer`
+that holds its deferral until the fetch actually finishes, so the spinner lasts as long as the work
+does. All three reload by fetching first and swapping second, which keeps what is on screen there
+through the round trip and means a refresh that fails costs the reader the update rather than the
+list. The gesture stays off for mouse users — on desktop the toolbar button is the affordance.
+
+On a post, the gesture re-reads the thread and not the post above it. The post arrived already drawn
+from the row that was tapped, and putting a second request behind a gesture whose whole point is the
+conversation would make the slower half of the work the part nobody asked for. The consequence is
+worth knowing: the comment count in the post header is the one that came with the post, so it can
+sit a few behind the thread underneath it.
 
 ## Coming back lands where you left
 
@@ -82,6 +88,40 @@ Following a remote community normally comes back **Pending** rather than subscri
 to travel to the community's home instance and be acknowledged, which is not instant and is not a
 failure. Pending counts as following, so the button unsubscribes rather than trying to follow twice.
 The optimistic state is Pending too, for the same reason: it is the honest guess.
+
+## Reading past where the thread was cut
+
+A thread arrives in one request, eight levels deep. That covers almost everything — but Lemmy
+threads are a back-and-forth between two people, and those run deeper than eight almost every time
+they run at all. Below the cut the server still says how many replies it did not send, and that
+number is the control: pressing it fetches the sub-thread from exactly the comment the thread was
+cut at.
+
+Three things about the request make it work. The depth counts from that comment rather than from the
+post, so the same eight reaches as far below the cut as the first request reached below the post —
+verified against lemmy.world, where asking from a comment at depth 8 returns comments at depth 9.
+The thread's own sort is carried along, so what arrives is ordered like what is already on screen
+rather than by the server's default. And the response leads with the comment that was asked about,
+which is already there, so the merge has to recognise it rather than file it beneath itself.
+
+Placement goes by `CommentPath`, not by the shape of the response. A sub-thread comes back flat and
+in sort order, so a reply can arrive before the comment it hangs off; comments are filed in repeated
+passes, each pass placing whatever has found a parent, until a pass places nothing. What is left
+then hangs off a comment that never arrived, and is dropped — filing it at the top would claim it
+replied to something it did not.
+
+The same replies are missing from every comment above the cut, and each of those is on screen
+saying so. So a fetch settles the counts from the top of the thread down, not just at the comment
+that was pressed. Without that, expanding deep in a chain left the ancestor a few lines up still
+offering to fetch a reply that had just appeared below it — which is exactly what a real thread on
+lemmy.world did before the comments were given a link to their parent.
+
+The count itself cannot be trusted to reach zero. `child_count` includes replies the server will not
+serve: ones a moderator removed, ones from a blocked account. So the offer disappears when a fetch
+brings back nothing new, whatever the count still says, rather than inviting the reader to press a
+button that will never do anything. `limit` is worth mentioning too — lemmy.world ignores it on
+comment lists, returning all 169 comments of a thread for a request that asked for five — so depth,
+not page size, is the only thing that actually truncates, and there is no second page to ask for.
 
 ## Writing a comment
 

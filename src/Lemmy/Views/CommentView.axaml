@@ -90,10 +90,23 @@
                     <views:CommentComposerView DataContext="{Binding Composer}" />
                 </StackPanel>
 
+                <!-- The count is the control: a thread cut off at the fetch depth is picked up
+                     from exactly the comment it was cut at. -->
+                <Button Classes="link"
+                        Padding="0"
+                        IsVisible="{Binding HasUnloadedReplies}"
+                        IsEnabled="{Binding !IsLoadingReplies}"
+                        Command="{Binding LoadMoreRepliesCommand}">
+                    <TextBlock Classes="meta"
+                               Foreground="{DynamicResource AccentText}"
+                               Text="{Binding UnloadedRepliesLabel}" />
+                </Button>
+
                 <TextBlock Classes="meta"
-                           Foreground="{DynamicResource SecondaryText}"
-                           IsVisible="{Binding HasUnloadedReplies}"
-                           Text="{Binding UnloadedRepliesLabel}" />
+                           TextWrapping="Wrap"
+                           Foreground="{DynamicResource NegativeText}"
+                           IsVisible="{Binding RepliesError, Converter={x:Static ObjectConverters.IsNotNull}}"
+                           Text="{Binding RepliesError}" />
             </StackPanel>
         </Border>
 

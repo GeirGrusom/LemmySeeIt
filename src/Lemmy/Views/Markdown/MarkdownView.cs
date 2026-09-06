@@ -312,17 +312,17 @@ public sealed class MarkdownView : Decorator
         // The picture loader rather than the thumbnail one: it decodes every frame, so a GIF in a
         // comment moves. What comes back is ours to dispose — unlike a cached thumbnail, which is
         // shared with whatever else is showing it.
-        AnimatedImage? picture = await media.Images
+        PictureLoad load = await media.Images
             .LoadPictureAsync(image.Source, ImageDecodeWidth)
             .ConfigureAwait(true);
 
         content.Children.Remove(progress);
 
-        if (picture is null)
+        if (load.Picture is not { } picture)
         {
             content.Children.Add(new TextBlock
             {
-                Text = "That picture could not be loaded.",
+                Text = load.Message,
                 TextWrapping = TextWrapping.Wrap,
             });
             return;

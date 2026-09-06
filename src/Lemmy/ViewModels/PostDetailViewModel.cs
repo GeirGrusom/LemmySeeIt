@@ -20,8 +20,12 @@ public sealed partial class PostDetailViewModel : PageViewModel
     /// <summary>Post images get the full content width, so they are decoded larger than a thumbnail.</summary>
     private const int ImageDecodeWidth = 1080;
 
-    /// <summary>One request deep enough to cover almost every thread, without a wasteful payload.</summary>
-    private static readonly CommentDepth ThreadDepth = CommentDepth.Clamp(8);
+    /// <summary>
+    /// One request deep enough to cover almost every thread, without a wasteful payload. A thread
+    /// that does run deeper is picked up from where it was cut, by
+    /// <see cref="CommentViewModel.LoadMoreRepliesCommand"/>.
+    /// </summary>
+    private static readonly CommentDepth ThreadDepth = CommentDepth.Default;
 
     private readonly ILemmyApi api;
     private readonly AppSettings settings;
@@ -147,6 +151,19 @@ public sealed partial class PostDetailViewModel : PageViewModel
     /// <summary>The comment trees, in server order.</summary>
     public ObservableCollection<CommentViewModel> Comments { get; } = [];
 
+    /// <summary>What every comment in the loaded thread shares; replaced whenever the thread is.</summary>
+    private CommentContext? threadContext;
+
+    private CommentContext CreateCommentContext() => new(
+        api,
+        Services.Account,
+        Media,
+        Services.Copier,
+        Navigator,
+        Services.Now,
+        SelectedSort,
+        OpenMarkdownLinkCommand);
+
     /// <summary>The comment sorts offered in the toolbar.</summary>
     public static ReadOnlyCollection<CommentSortOption> SortOptions => DisplayOptions.CommentSorts;
 
@@ -183,20 +200,32 @@ public sealed partial class PostDetailViewModel : PageViewModel
         await imageTask.ConfigureAwait(true);
     }
 
+    /// <summary>
+    /// Re-fetches the comment thread. This is what the pull-to-refresh gesture calls: the post
+    /// itself was handed in already drawn and does not need fetching again, and re-reading it would
+    /// put a second request behind a gesture that is about the conversation.
+    /// </summary>
+    public override Task RefreshAsync() => ReloadCommentsAsync();
+
     /// <summary>Fetches the comment thread with the current sort.</summary>
     [RelayCommand]
     public Task ReloadCommentsAsync() => RunAsync(async cancellationToken =>
     {
-        Comments.Clear();
-        HasNoComments = false;
-
         var query = new CommentQuery(Summary.Post.Id, SelectedSort, ThreadDepth, PageSize.Clamp(PageSize.Maximum));
         CommentThread thread = await api.GetCommentsAsync(query, cancellationToken).ConfigureAwait(true);
 
-        DateTimeOffset now = Services.Now;
+        // Fetched before anything is discarded, so a pull-to-refresh keeps the thread on screen
+        // throughout rather than blanking it for the length of a round trip — and a refresh that
+        // fails leaves the reader with the thread they already had, under the reason it failed.
+        // Rebuilt with the sort that was actually used, so that replies fetched later from inside
+        // the thread come back ordered the same way.
+        CommentContext context = CreateCommentContext();
+        threadContext = context;
+
+        Comments.Clear();
         foreach (CommentNode root in thread.Roots)
         {
-            Comments.Add(new CommentViewModel(root, now, api, Services.Account, Media, Services.Copier, Navigator, OpenMarkdownLinkCommand));
+            Comments.Add(new CommentViewModel(root, context));
         }
 
         HasNoComments = Comments.Count == 0;
@@ -355,7 +384,7 @@ public sealed partial class PostDetailViewModel : PageViewModel
 
         // At the top, whatever the thread is sorted by: the sort is the server's answer to a
         // question asked before this comment existed.
-        Comments.Insert(0, new CommentViewModel(posted, Services.Now, api, Services.Account, Media, Services.Copier, Navigator, OpenMarkdownLinkCommand));
+        Comments.Insert(0, new CommentViewModel(posted, threadContext ??= CreateCommentContext()));
         HasNoComments = false;
     }
 

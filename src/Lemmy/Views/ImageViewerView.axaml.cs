@@ -28,9 +28,6 @@ public sealed partial class ImageViewerView : UserControl
     /// </summary>
     private static readonly TimeSpan DoubleTapWindow = TimeSpan.FromMilliseconds(260);
 
-    /// <summary>How far a flick has to travel before it means "next picture" rather than "dismiss".</summary>
-    private const double SwipeThreshold = 60;
-
     /// <summary>
     /// How often to check which animation frame is due. Faster than any sane GIF, so frame timings
     /// are honoured rather than rounded up to whatever tick rate happened to be chosen.
@@ -272,12 +269,14 @@ public sealed partial class ImageViewerView : UserControl
             return;
         }
 
+        // Up and down rather than left and right, to match the flick and the feed both. The
+        // horizontal keys are left unbound for the pictures within a single post.
         switch (e.Key)
         {
-            case Key.Left when model.CanShowPrevious:
+            case Key.Up when model.CanShowPrevious:
                 _ = model.ShowPreviousAsync();
                 break;
-            case Key.Right when model.CanShowNext:
+            case Key.Down when model.CanShowNext:
                 _ = model.ShowNextAsync();
                 break;
             case Key.Escape:
@@ -339,8 +338,10 @@ public sealed partial class ImageViewerView : UserControl
         totalDrag += delta;
         didDrag = true;
 
-        // Zoomed in, a drag moves the picture. Zoomed out there is nothing to move, so the same
-        // drag is a flick between pictures instead — resolved on release, once its direction is known.
+        // Zoomed in, a drag moves the picture, in whichever direction it went — panning a tall
+        // comic page must never be read as a page turn. Zoomed out there is nothing to move, so the
+        // same drag is a flick between pictures instead, resolved on release once its direction is
+        // known.
         if (model.Zoom.IsZoomed)
         {
             Update(model.Zoom.PannedBy(delta, Viewport, FittedSize()));
@@ -379,32 +380,33 @@ public sealed partial class ImageViewerView : UserControl
     }
 
     /// <summary>
-    /// Turns a horizontal flick into a step through the gallery. Mostly-vertical drags are left
-    /// alone: they are how a reader scrolls a tall comic page once zoomed, and misreading one as a
-    /// page turn would be maddening.
+    /// Turns a flick into a step through the gallery, and reports whether it was one at all. A
+    /// flick that lands at either end of the gallery still counts: swallowing it is better than
+    /// letting it fall through and dismiss the viewer.
     /// </summary>
     private static bool TrySwipe(Vector travelled, ImageViewerViewModel model)
     {
-        if (Math.Abs(travelled.X) < SwipeThreshold || Math.Abs(travelled.X) <= Math.Abs(travelled.Y))
+        switch (Flick.Read(travelled))
         {
-            return false;
-        }
+            case GalleryStep.Next:
+                if (model.CanShowNext)
+                {
+                    _ = model.ShowNextAsync();
+                }
 
-        if (travelled.X < 0 && model.CanShowNext)
-        {
-            _ = model.ShowNextAsync();
-            return true;
-        }
+                return true;
 
-        if (travelled.X > 0 && model.CanShowPrevious)
-        {
-            _ = model.ShowPreviousAsync();
-            return true;
-        }
+            case GalleryStep.Previous:
+                if (model.CanShowPrevious)
+                {
+                    _ = model.ShowPreviousAsync();
+                }
 
-        // At either end of the gallery the flick has nowhere to go; swallow it rather than letting
-        // it fall through and dismiss the viewer.
-        return true;
+                return true;
+
+            default:
+                return false;
+        }
     }
 
     private void CancelPendingClose() => closeTimer.Stop();

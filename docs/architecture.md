@@ -43,7 +43,8 @@ time, and unreadable settings fall back field by field. Each of those is a test.
 Lemmy sends a thread as a flat list plus a materialised path (`0.100.200`) on each comment.
 `CommentPath` parses that with spans and `CommentTreeBuilder` turns it into a tree, preserving the
 server's ordering within each level. A comment whose parent is absent becomes a root, which is what
-makes a "load more replies" sub-thread renderable on its own.
+makes a fetched sub-thread renderable on its own — and that is exactly what arrives when a reader
+presses the count of replies a truncated thread is missing.
 
 ## Attribution is generated, not maintained
 

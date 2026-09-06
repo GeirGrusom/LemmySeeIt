@@ -224,14 +224,14 @@ internal sealed class ImageGalleryTests
     public async Task ASlowLoadDoesNotOverwriteAPictureTheReaderHasAlreadyMovedPast()
     {
         // The first picture never finishes downloading; the second answers at once.
-        var slow = new TaskCompletionSource<AnimatedImage?>();
+        var slow = new TaskCompletionSource<PictureLoad>();
         bool isFirstCall = true;
         services.ImageLoader.LoadPictureAsync(Arg.Any<WebLink>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
             .Returns(_ =>
             {
                 if (!isFirstCall)
                 {
-                    return Task.FromResult<AnimatedImage?>(null);
+                    return Task.FromResult(PictureLoad.Unreachable);
                 }
 
                 isFirstCall = false;
@@ -245,7 +245,7 @@ internal sealed class ImageGalleryTests
         await viewer.ShowNextAsync();
 
         // The abandoned first load now lands, well after the reader moved on.
-        slow.SetResult(null);
+        slow.SetResult(PictureLoad.Unreachable);
         await first;
 
         Assert.Multiple(() =>

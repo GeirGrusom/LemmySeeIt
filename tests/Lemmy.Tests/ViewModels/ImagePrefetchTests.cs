@@ -26,7 +26,7 @@ internal sealed class ImagePrefetchTests
         services = new TestServices();
         services.ImageLoader
             .LoadPictureAsync(Arg.Any<WebLink>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
-            .Returns(_ => Task.FromResult<AnimatedImage?>(Picture()));
+            .Returns(_ => Task.FromResult(PictureLoad.Loaded(Picture())));
     }
 
     /// <summary>A one-frame picture of a given size, so budgets can be exercised.</summary>
@@ -161,7 +161,7 @@ internal sealed class ImagePrefetchTests
         // 4096 x 4096 x 4 bytes is 64MB, so a pair cannot fit the budget.
         services.ImageLoader
             .LoadPictureAsync(Arg.Any<WebLink>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
-            .Returns(_ => Task.FromResult<AnimatedImage?>(Picture(4096)));
+            .Returns(_ => Task.FromResult(PictureLoad.Loaded(Picture(4096))));
 
         PostSummary[] pictures = Pictures(3);
         using ImageViewerViewModel viewer = Viewer(new StubGallery(pictures), pictures[0]);
