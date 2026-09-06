@@ -1,6 +1,7 @@
 using System.Collections.Immutable;
 using System.Collections.ObjectModel;
 using Avalonia.Media.Imaging;
+using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Lemmy.Api;
@@ -19,6 +20,14 @@ public sealed partial class PostDetailViewModel : PageViewModel
 {
     /// <summary>Post images get the full content width, so they are decoded larger than a thumbnail.</summary>
     private const int ImageDecodeWidth = 1080;
+
+    /// <summary>
+    /// How many comments to hand the layout before letting it draw. A busy thread is hundreds of
+    /// nested controls and measuring them all in one pass freezes a phone for over a second, so
+    /// they go on in screenfuls: the same total work, but the reader can see and touch it
+    /// throughout instead of waiting for the end of it.
+    /// </summary>
+    private const int CommentsPerBatch = 8;
 
     /// <summary>
     /// One request deep enough to cover almost every thread, without a wasteful payload. A thread
@@ -154,6 +163,20 @@ public sealed partial class PostDetailViewModel : PageViewModel
     /// <summary>What every comment in the loaded thread shares; replaced whenever the thread is.</summary>
     private CommentContext? threadContext;
 
+    /// <summary>
+    /// How the page waits for what it has just added to be drawn before adding more. The dispatcher
+    /// does that for real; a unit test replaces it, because no loop is turning there and waiting for
+    /// a frame that will never come would hang rather than fail.
+    /// </summary>
+    internal Func<Task> Drawn { get; set; } = DrawnAsync;
+
+    /// <summary>
+    /// Which thread is being put on screen. Filling happens across several turns of the dispatcher,
+    /// so a sort changed or a refresh pulled midway has to be able to abandon the one before it
+    /// rather than interleave two threads into one list.
+    /// </summary>
+    private int threadGeneration;
+
     private CommentContext CreateCommentContext() => new(
         api,
         Services.Account,
@@ -211,6 +234,8 @@ public sealed partial class PostDetailViewModel : PageViewModel
     [RelayCommand]
     public Task ReloadCommentsAsync() => RunAsync(async cancellationToken =>
     {
+        int generation = ++threadGeneration;
+
         var query = new CommentQuery(Summary.Post.Id, SelectedSort, ThreadDepth, PageSize.Clamp(PageSize.Maximum));
         CommentThread thread = await api.GetCommentsAsync(query, cancellationToken).ConfigureAwait(true);
 
@@ -223,13 +248,40 @@ public sealed partial class PostDetailViewModel : PageViewModel
         threadContext = context;
 
         Comments.Clear();
+        HasNoComments = thread.Roots.IsEmpty;
+
+        int pending = 0;
         foreach (CommentNode root in thread.Roots)
         {
             Comments.Add(new CommentViewModel(root, context));
+            pending += root.LoadedCount;
+
+            if (pending < CommentsPerBatch)
+            {
+                continue;
+            }
+
+            pending = 0;
+            await Drawn().ConfigureAwait(true);
+
+            // Another thread started while this one was going on screen — a sort changed, or the
+            // page was pulled down. It owns the list now.
+            if (generation != threadGeneration || cancellationToken.IsCancellationRequested)
+            {
+                return;
+            }
         }
 
-        HasNoComments = Comments.Count == 0;
     });
+
+    /// <summary>
+    /// Waits for what has been added to be laid out and drawn. Queued below input as well as below
+    /// render, so the frame lands and a tap is answered before the next batch is handed over;
+    /// yielding at the default priority would only queue the batches back to back, above the very
+    /// drawing they are waiting for.
+    /// </summary>
+    private static Task DrawnAsync() =>
+        Dispatcher.UIThread.InvokeAsync(static () => { }, DispatcherPriority.Background).GetTask();
 
     /// <summary>Opens a link the reader pressed inside the body or a comment.</summary>
     [RelayCommand]

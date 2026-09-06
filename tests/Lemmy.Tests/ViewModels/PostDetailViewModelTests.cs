@@ -25,8 +25,19 @@ internal sealed class PostDetailViewModelTests
         services.Api.GetCommentsAsync(Arg.Any<CommentQuery>(), Arg.Any<CancellationToken>())
             .Returns(Task.FromResult(thread));
 
+    /// <summary>
+    /// A page whose "wait for the frame" step returns at once. Nothing is turning the dispatcher in
+    /// a unit test, so the real one would wait for a frame that never comes.
+    /// </summary>
     private PostDetailViewModel CreatePage(PostSummary? summary = null, AppSettings? settings = null) =>
-        new(services.Services, navigator, services.Api, summary ?? Sample.PostSummary(), settings ?? AppSettings.Default);
+        new(services.Services, navigator, services.Api, summary ?? Sample.PostSummary(), settings ?? AppSettings.Default)
+        {
+            Drawn = () => Task.CompletedTask,
+        };
+
+    /// <summary>A thread of <paramref name="count"/> top-level comments.</summary>
+    private static CommentThread ThreadOf(int count) =>
+        new([.. Enumerable.Range(1, count).Select(id => Sample.CommentNode(id, $"0.{id}"))]);
 
     /// <summary>The gesture is about the conversation, so it re-reads the thread and nothing else.</summary>
     [Test]
@@ -94,6 +105,79 @@ internal sealed class PostDetailViewModelTests
             Assert.That(page.HasNoComments, Is.False, "a failed refresh does not mean there are no comments");
             Assert.That(page.ErrorMessage, Is.EqualTo("lemmy.world answered 502."));
         });
+    }
+
+    /// <summary>
+    /// A busy thread is hundreds of nested controls, and handing them all to the layout at once
+    /// freezes a phone for over a second — measured at 1.3s for a 179-comment thread on a Galaxy
+    /// S24. They go on in screenfuls instead, and every one of them still arrives.
+    /// </summary>
+    [Test]
+    public async Task LoadAsync_PutsALongThreadOnScreenInBatches()
+    {
+        ThreadReturns(ThreadOf(40));
+        var batches = 0;
+        using PostDetailViewModel page = CreatePage();
+        page.Drawn = () =>
+        {
+            batches++;
+            return Task.CompletedTask;
+        };
+
+        await page.LoadAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(page.Comments, Has.Count.EqualTo(40), "every comment still arrives");
+            Assert.That(batches, Is.GreaterThan(1), "and not all in one pass");
+        });
+    }
+
+    /// <summary>The first screenful is on screen before the layout is asked for any more than that.</summary>
+    [Test]
+    public async Task LoadAsync_ShowsTheFirstCommentsBeforeTheRest()
+    {
+        ThreadReturns(ThreadOf(40));
+        var countAtFirstDraw = 0;
+        using PostDetailViewModel page = CreatePage();
+        page.Drawn = () =>
+        {
+            countAtFirstDraw = countAtFirstDraw == 0 ? page.Comments.Count : countAtFirstDraw;
+            return Task.CompletedTask;
+        };
+
+        await page.LoadAsync();
+
+        Assert.That(countAtFirstDraw, Is.InRange(1, 12), "a screenful, not the whole thread");
+    }
+
+    /// <summary>
+    /// Filling runs across several turns of the dispatcher, so a sort changed or a refresh pulled
+    /// midway has to abandon the thread before it rather than interleave the two into one list.
+    /// </summary>
+    [Test]
+    public async Task ASecondLoadStartedMidwayTakesOverTheList()
+    {
+        ThreadReturns(ThreadOf(40));
+        using PostDetailViewModel page = CreatePage();
+
+        Task? second = null;
+        page.Drawn = () =>
+        {
+            // Start the replacement once, from inside the first one's filling.
+            if (second is null)
+            {
+                ThreadReturns(ThreadOf(3));
+                second = page.ReloadCommentsAsync();
+            }
+
+            return Task.CompletedTask;
+        };
+
+        await page.LoadAsync();
+        await second!;
+
+        Assert.That(page.Comments, Has.Count.EqualTo(3), "the second thread owns the list");
     }
 
     [Test]

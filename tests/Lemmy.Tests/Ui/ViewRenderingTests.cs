@@ -362,6 +362,33 @@ internal sealed class ViewRenderingTests
         await services.Api.Received(2).GetCommunitiesAsync(Arg.Any<Lemmy.Api.CommunityQuery>(), Arg.Any<CancellationToken>());
     }
 
+    /// <summary>
+    /// The batched fill against the real dispatcher rather than a stand-in: a long thread goes on
+    /// screen a screenful at a time, waiting for each to be drawn, and still ends up complete.
+    /// </summary>
+    [AvaloniaTest]
+    [CancelAfter(20000)]
+    public async Task ALongThreadStillArrivesInFullWhenPacedByTheDispatcher()
+    {
+        var services = new TestServices();
+        services.Api.GetCommentsAsync(Arg.Any<Lemmy.Api.CommentQuery>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(new CommentThread(
+                [.. Enumerable.Range(1, 40).Select(id => Sample.CommentNode(id, $"0.{id}"))])));
+
+        using var page = new PostDetailViewModel(
+            services.Services, new RecordingNavigator(), services.Api, Sample.PostSummary(), AppSettings.Default);
+        Window window = Show(new PostDetailView(), page);
+
+        await page.LoadAsync();
+        Settle();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(page.Comments, Has.Count.EqualTo(40));
+            Assert.That(Descendants(window).OfType<CommentView>().Count(), Is.EqualTo(40));
+        });
+    }
+
     [AvaloniaTest]
     public async Task PullingAPostDownRefetchesItsThread()
     {

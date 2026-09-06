@@ -89,6 +89,38 @@ to travel to the community's home instance and be acknowledged, which is not ins
 failure. Pending counts as following, so the button unsubscribes rather than trying to follow twice.
 The optimistic state is Pending too, for the same reason: it is the honest guess.
 
+## A thread goes on screen a screenful at a time
+
+Opening a busy post used to freeze the app. Measured on a Galaxy S24 against a 179-comment thread
+on lemmy.world, the main thread was blocked for **1.3 seconds** on a Release build — 4.2 on Debug —
+with nothing drawn and no tap answered for the duration.
+
+The measurement is worth keeping because it contradicts the obvious guess. Fetching is not the
+problem, and neither is building the view models: 179 of them, Markdown parsed and all, take 26 ms.
+The whole cost is realising and measuring the controls. A comment is a `CommentView` holding a
+`MarkdownView`, a `WrapPanel` of actions and an `ItemsControl` of more `CommentView`s, and the
+thread hangs in a plain `ItemsControl` inside a `ScrollViewer` — which does not virtualise. So every
+comment in the thread was measured before the first one could be drawn.
+
+Comments are therefore handed to the layout in batches of roughly eight, waiting for each batch to
+be drawn before adding the next. The total work is unchanged; what changes is that the reader sees
+the top of the thread almost immediately and can scroll and tap while the rest fills in. The worst
+single stall drops from 1.3 s to around 0.3 s.
+
+Where the batch waits matters. `Task.Yield` posts its continuation at the default priority, which in
+Avalonia sits *above* `Render` — so yielding that way would queue every batch ahead of the drawing
+they are waiting for and change nothing. The wait is posted at `Background`, below `Render` and
+below `Input`, so the frame lands and a tap is answered before the next batch is handed over.
+
+Filling across several turns of the dispatcher means two threads can now race — a sort changed or a
+refresh pulled while the previous one is still going on. Each fill takes a generation number and
+stops as soon as another starts, so the later thread owns the list rather than interleaving with it.
+
+The remaining stall is a single top-level comment with a large sub-thread: the budget is only
+checked between roots, so a root with thirty replies still goes on in one pass. Removing that
+entirely means virtualising the list, which needs the post header to become the list's header rather
+than a sibling inside the same scroller — a change to how the page scrolls, not just how it fills.
+
 ## Reading past where the thread was cut
 
 A thread arrives in one request, eight levels deep. That covers almost everything — but Lemmy

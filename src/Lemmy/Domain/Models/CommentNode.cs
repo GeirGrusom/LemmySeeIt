@@ -36,6 +36,12 @@ public sealed record CommentNode(
     /// </summary>
     public int UnloadedReplyCount => Math.Max(0, Tally.ChildCount.Value - CountLoadedDescendants());
 
+    /// <summary>
+    /// This comment and every reply below it that actually arrived. What it measures is how many
+    /// controls drawing this node costs, which is what paces the thread onto the screen.
+    /// </summary>
+    public int LoadedCount => 1 + CountLoadedDescendants();
+
     private int CountLoadedDescendants()
     {
         int total = Replies.Length;
